@@ -8,10 +8,15 @@
 //!   joins the first, minus its repeated header row.
 //! - Columns and rows with nothing in them are dropped.
 
+use super::layout::Found;
 use super::markdown::Located;
 use super::structure::Recovered;
 use crate::model::{Block, CellSlot, Inline, Table, TableKind, inlines_to_plain_text};
+use std::collections::HashMap;
 
+/// Put each recovered table where its text sits in `blocks`. A table whose
+/// text cannot be found in one piece is left out: the running text still
+/// carries its content.
 /// Put each recovered table where its text sits in `blocks`. A table whose
 /// text cannot be found in one piece is left out: the running text still
 /// carries its content.
@@ -92,8 +97,10 @@ fn block_signature(block: &Block) -> String {
 
 fn collect_text(block: &Block, out: &mut String) {
     match block {
+        // Blocks and cells end in a space so their words stay apart.
         Block::Paragraph(inlines) | Block::Heading { content: inlines, .. } => {
-            out.push_str(&inlines_to_plain_text(inlines))
+            out.push_str(&inlines_to_plain_text(inlines));
+            out.push(' ');
         }
         Block::List(list) => {
             for item in &list.items {
@@ -114,7 +121,10 @@ fn collect_text(block: &Block, out: &mut String) {
             }
         }
         Block::BlockQuote(inner) => inner.iter().for_each(|b| collect_text(b, out)),
-        Block::CodeBlock { text, .. } | Block::Math(text) => out.push_str(text),
+        Block::CodeBlock { text, .. } | Block::Math(text) => {
+            out.push_str(text);
+            out.push(' ');
+        }
         Block::Rule => {}
     }
 }
@@ -198,6 +208,339 @@ fn trim_breaks(mut inlines: Vec<Inline>) -> Vec<Inline> {
     }
     inlines.retain(|i| !matches!(i, Inline::Text { text, .. } if text.is_empty()));
     inlines
+}
+
+/// Put each region read from page geometry in place of what pdf-inspector
+/// made of its text: the blocks on the region's page whose words mostly
+/// come from the region give way to it. A table that runs on from the
+/// previous page joins the part before the break.
+/// A line of a page's text, top to bottom, for the loss check.
+pub(super) struct PageLine {
+    /// Baseline.
+    pub y: f32,
+    pub text: String,
+}
+
+pub(super) fn place_found(
+    blocks: &mut Vec<Located>,
+    mut found: Vec<Found>,
+    lines: &HashMap<u32, Vec<PageLine>>,
+) {
+    found.sort_by(|a, b| a.page.cmp(&b.page).then(b.region.y1.total_cmp(&a.region.y1)));
+    // Continuations: fold a table at the top of a page into the one ending
+    // the page before, and keep only its words, to claim its blocks.
+    let mut absorbed = vec![false; found.len()];
+    let mut last_table: Option<usize> = None;
+    for i in 0..found.len() {
+        let joins = last_table.is_some_and(|prev| {
+            let (a, b) = (&found[prev], &found[i]);
+            b.page == a.page + 1
+                && a.at_bottom
+                && b.at_top
+                && !b.has_caption
+                && !a.is_figure
+                && !b.is_figure
+                && table_width(a) == table_width(b)
+                && table_width(a) > 1
+        });
+        if joins {
+            let prev = last_table.unwrap_or(i);
+            let next_blocks = std::mem::take(&mut found[i].blocks);
+            let next_table = found[i].table.take();
+            let mut notes = Vec::new();
+            for (n, block) in next_blocks.into_iter().enumerate() {
+                match (Some(n) == next_table, block) {
+                    (true, Block::Table(table)) => {
+                        let host = &mut found[prev];
+                        let Some(Block::Table(first)) =
+                            host.table.and_then(|t| host.blocks.get_mut(t))
+                        else {
+                            continue;
+                        };
+                        if let Err(table) = append(first, table) {
+                            // Spans reach into a dropped header: keep it apart.
+                            notes.push(Block::Table(table));
+                        }
+                    }
+                    (_, block) => notes.push(block),
+                }
+            }
+            found[prev].blocks.extend(notes);
+            found[prev].at_bottom = found[i].at_bottom;
+            absorbed[i] = true;
+            last_table = Some(prev);
+            continue;
+        }
+        last_table = if found[i].is_figure {
+            last_table.filter(|&p| found[p].page == found[i].page)
+        } else {
+            Some(i)
+        };
+    }
+    let figure_pages: Vec<u32> = found.iter().filter(|f| f.is_figure).map(|f| f.page).collect();
+    for (f, absorbed) in found.into_iter().zip(absorbed) {
+        let page_lines = lines.get(&f.page).map(Vec::as_slice).unwrap_or(&[]);
+        place_region(blocks, f, absorbed, page_lines);
+    }
+    // Text set along curves that no figure region reached still comes
+    // through as a "table" of word fragments; the figure's own text above
+    // already carries it.
+    blocks.retain(|b| {
+        !(figure_pages.contains(&b.page) && matches!(&b.block, Block::Table(t) if fragmented(t)))
+    });
+}
+
+/// A table whose words are mostly pieces of words.
+fn fragmented(table: &Table) -> bool {
+    let mut text = String::new();
+    collect_text(&Block::Table(table.clone()), &mut text);
+    let words: Vec<String> =
+        tokens(&text).into_iter().filter(|w| w.chars().all(char::is_alphabetic)).collect();
+    let short = words.iter().filter(|w| w.chars().count() <= 3).count();
+    words.len() >= 10 && short * 100 >= words.len() * 55
+}
+
+fn table_width(found: &Found) -> usize {
+    match found.table.and_then(|t| found.blocks.get(t)) {
+        Some(Block::Table(table)) => width(table),
+        _ => 0,
+    }
+}
+
+/// Word tokens: letters and digits only, lowercased, so spacing and
+/// punctuation differences between the two readings do not matter.
+fn tokens(text: &str) -> Vec<String> {
+    text.split_whitespace()
+        .map(|w| {
+            w.chars()
+                .filter(|c| c.is_alphanumeric())
+                .flat_map(char::to_lowercase)
+                .collect::<String>()
+        })
+        .filter(|w| !w.is_empty())
+        .collect()
+}
+
+/// Page lines outside `found`'s region whose words only the claimed blocks
+/// held: paragraphs to keep, above and below the region.
+fn orphans(
+    blocks: &[Located],
+    claimed: &[usize],
+    found: &Found,
+    lines: &[PageLine],
+) -> (Vec<Block>, Vec<Block>) {
+    let mut removed: HashMap<String, usize> = HashMap::new();
+    for &i in claimed {
+        let mut text = String::new();
+        collect_text(&blocks[i].block, &mut text);
+        for word in tokens(&text) {
+            *removed.entry(word).or_default() += 1;
+        }
+    }
+    for word in tokens(&found.text) {
+        if let Some(n) = removed.get_mut(&word) {
+            *n = n.saturating_sub(1);
+        }
+    }
+    let (mut before, mut after): (Vec<String>, Vec<String>) = (Vec::new(), Vec::new());
+    for line in lines {
+        if line.y <= found.region.y1 + 2.0 && line.y >= found.region.y0 - 2.0 {
+            continue;
+        }
+        let words = tokens(&line.text);
+        if words.len() < 2 {
+            continue;
+        }
+        let mut trial = removed.clone();
+        let hits = words
+            .iter()
+            .filter(|w| match trial.get_mut(*w) {
+                Some(n) if *n > 0 => {
+                    *n -= 1;
+                    true
+                }
+                _ => false,
+            })
+            .count();
+        if hits * 10 >= words.len() * 6 {
+            removed = trial;
+            if line.y > found.region.y1 {
+                before.push(line.text.clone())
+            } else {
+                after.push(line.text.clone())
+            }
+        }
+    }
+    let paragraph = |lines: Vec<String>| -> Vec<Block> {
+        if lines.is_empty() {
+            Vec::new()
+        } else {
+            vec![Block::Paragraph(vec![Inline::plain(lines.join(" "))])]
+        }
+    };
+    (paragraph(before), paragraph(after))
+}
+
+fn place_region(blocks: &mut Vec<Located>, found: Found, absorbed: bool, lines: &[PageLine]) {
+    let mut words: HashMap<String, usize> = HashMap::new();
+    for word in tokens(&found.text) {
+        *words.entry(word).or_default() += 1;
+    }
+    let mut letters: HashMap<char, usize> = HashMap::new();
+    if found.is_figure {
+        for c in found.text.chars().filter(|c| !c.is_whitespace()).flat_map(char::to_lowercase) {
+            *letters.entry(c).or_default() += 1;
+        }
+    }
+    let mut claimed: Vec<usize> = Vec::new();
+    for (i, located) in blocks.iter().enumerate() {
+        if located.page != found.page {
+            continue;
+        }
+        let mut text = String::new();
+        collect_text(&located.block, &mut text);
+        let block_words = tokens(&text);
+        if block_words.is_empty() {
+            continue;
+        }
+        let mut trial = words.clone();
+        let mut unmatched: Vec<&str> = Vec::new();
+        let originals: Vec<&str> = text.split_whitespace().collect();
+        let mut matched = 0;
+        let mut k = 0;
+        for original in &originals {
+            let token: String = original
+                .chars()
+                .filter(|c| c.is_alphanumeric())
+                .flat_map(char::to_lowercase)
+                .collect();
+            if token.is_empty() {
+                continue;
+            }
+            k += 1;
+            match trial.get_mut(&token) {
+                Some(n) if *n > 0 => {
+                    *n -= 1;
+                    matched += 1;
+                }
+                _ => unmatched.push(original),
+            }
+        }
+        // Most of the block's words, and all of a short block's: a heading
+        // sharing a word or two with a table is not part of it.
+        let by_words = matched * 10 >= k * 6 && (k > 4 || matched == k);
+        // Text set along curves reaches pdf-inspector in pieces its words
+        // no longer match; for figures the letters decide.
+        let by_letters = found.is_figure
+            && !by_words
+            && matches!(&located.block, Block::Table(t) if fragmented(t))
+            && text.chars().count() <= 3000
+            && {
+                let mut trial = letters.clone();
+                let mut total = 0;
+                let mut hit = 0;
+                for c in text.chars().filter(|c| !c.is_whitespace()).flat_map(char::to_lowercase) {
+                    total += 1;
+                    if let Some(n) = trial.get_mut(&c)
+                        && *n > 0
+                    {
+                        *n -= 1;
+                        hit += 1;
+                    }
+                }
+                if total > 0 && hit * 4 >= total * 3 {
+                    letters = trial;
+                    true
+                } else {
+                    false
+                }
+            };
+        if by_words || by_letters {
+            if by_words {
+                words = trial;
+            }
+            claimed.push(i);
+        }
+    }
+    // Short blocks next to the claimed ones that hold nothing but the
+    // region's words are its pieces too (a header line pdf-inspector set
+    // apart), even where the words were counted already.
+    if !claimed.is_empty() {
+        let vocabulary: std::collections::HashSet<String> =
+            tokens(&found.text).into_iter().collect();
+        let page_blocks: Vec<usize> =
+            (0..blocks.len()).filter(|&i| blocks[i].page == found.page).collect();
+        let mut grew = true;
+        while grew {
+            grew = false;
+            for &i in &page_blocks {
+                if claimed.contains(&i) {
+                    continue;
+                }
+                let adjacent =
+                    page_blocks.iter().any(|&j| claimed.contains(&j) && j.abs_diff(i) == 1);
+                let mut text = String::new();
+                collect_text(&blocks[i].block, &mut text);
+                let words = tokens(&text);
+                if adjacent
+                    && !words.is_empty()
+                    && words.len() <= 8
+                    && words.iter().all(|w| vocabulary.contains(w))
+                {
+                    claimed.push(i);
+                    grew = true;
+                }
+            }
+        }
+        claimed.sort_unstable();
+    }
+    // A note under the region that pdf-inspector ran into the paragraph
+    // after it: that paragraph keeps only its own text.
+    if let (Some(&last), Some(Block::Paragraph(note))) = (claimed.last(), found.blocks.last())
+        && found.table.is_some_and(|t| t + 1 < found.blocks.len())
+        && let Some(next) = blocks.get_mut(last + 1)
+        && next.page == found.page
+    {
+        let note: String =
+            inlines_to_plain_text(note).chars().filter(|c| !c.is_whitespace()).collect();
+        let text = block_signature(&next.block);
+        if !note.is_empty() && text.starts_with(&note) && splittable(&next.block) {
+            let (_, rest) = split_block(&next.block, note.chars().count());
+            match rest {
+                Some(rest) => next.block = rest,
+                None => claimed.push(last + 1),
+            }
+        }
+    }
+    // Lines outside the region that pdf-inspector ran into the blocks given
+    // up above (a paragraph merged into its table) go back in, before or
+    // after the region by where they sit.
+    let (before, after) = orphans(blocks, &claimed, &found, lines);
+    let page = found.page;
+    let mut inserted: Vec<Located> =
+        before.into_iter().map(|block| Located { block, page }).collect();
+    if !absorbed {
+        inserted.extend(found.blocks.into_iter().map(|block| Located { block, page }));
+    }
+    inserted.extend(after.into_iter().map(|block| Located { block, page }));
+    let at = match claimed.first() {
+        Some(&first) => first,
+        // pdf-inspector left the region's text out: it goes at the end of
+        // its page.
+        None => blocks.iter().position(|b| b.page > page).unwrap_or(blocks.len()),
+    };
+    let mut kept = Vec::with_capacity(blocks.len() + inserted.len());
+    let mut inserted = Some(inserted);
+    for (i, located) in std::mem::take(blocks).into_iter().enumerate() {
+        if i == at {
+            kept.extend(inserted.take().unwrap_or_default());
+        }
+        if !claimed.contains(&i) {
+            kept.push(located);
+        }
+    }
+    kept.extend(inserted.take().unwrap_or_default());
+    *blocks = kept;
 }
 
 /// Join a table continued on the next page to the part before the break.

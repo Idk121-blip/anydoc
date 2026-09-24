@@ -1,0 +1,21 @@
+---
+source: tests/snapshots.rs
+expression: output
+---
+Nel corso dell'anno sono pervenute oltre novantottomila segnalazioni di operazioni sospette, in aumento rispetto all'anno precedente; la crescita riguarda soprattutto gli operatori di gioco e gli intermediari finanziari diversi dalle banche, mentre le segnalazioni di matrice bancaria restano sostanzialmente stabili nel periodo.
+
+*Tavola 1.2*
+
+**Segnalazioni ricevute per tipologia di segnalante**
+
+| TIPOLOGIA DI SEGNALANTE | **2017** |  | **2018** |  |  |
+| --- | --- | --- | --- | --- | --- |
+|  | *(valori assoluti)* | *(quote %)* | *(valori assoluti)* | *(quote %)* | *(var. % rispetto al 2017)* |
+| **Totale** | **93.820** | **100,0** | **98.030** | **100,0** | **4,5** |
+| Banche e Poste | 72.171 | 76,9 | 71.054 | 72,5 | -1,5 |
+| Societa' di gestione dei mer- cati e strumenti finanziari | 5 | 0,0 | 11 | 0,0 | 120,0 |
+| Professionisti | 4.969 | 5,3 | 4.818 | 4,9 | -3,0 |
+
+(1) Dati provvisori per l'ultimo anno.
+
+Nel corso dell'anno sono pervenute oltre novantottomila segnalazioni di operazioni sospette, in aumento rispetto all'anno precedente; la crescita riguarda soprattutto

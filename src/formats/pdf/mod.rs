@@ -8,6 +8,10 @@
 //! - images drawn on a page become assets ([`images`]), in place;
 //! - a tagged PDF's own table structure replaces what text extraction made
 //!   of those tables ([`structure`]), spans included;
+//! - the rules and shapes a page draws ([`geometry`]) locate the tables
+//!   and figures layout analysis misreads: horizontally ruled tables with
+//!   grouped headers, two-column layouts split by a rule, charts whose
+//!   labels would otherwise become table cells ([`layout`]);
 //! - tables broken across pages rejoin, and empty rows and columns drop
 //!   ([`tables`]).
 //!
@@ -17,7 +21,9 @@
 //!
 //! [pdf-inspector]: https://github.com/firecrawl/pdf-inspector
 
+mod geometry;
 mod images;
+mod layout;
 mod markdown;
 mod structure;
 mod tables;
@@ -64,23 +70,7 @@ pub fn parse(bytes: &[u8]) -> Result<Document, ConvertError> {
     let assets = images.finish()?;
 
     if let Some(doc) = &doc {
-        let tagged = structure::tagged_tables(doc);
-        if !tagged.is_empty() {
-            // Only the pages the tables sit on need their text again.
-            let pages: std::collections::HashSet<u32> = tagged
-                .iter()
-                .flat_map(|t| {
-                    t.rows.iter().flatten().flat_map(|c| c.content.iter().map(|(p, _)| *p))
-                })
-                .collect();
-            match pdf_inspector::extractor::extract_text_with_positions_mem_pages(
-                bytes,
-                Some(&pages),
-            ) {
-                Ok(items) => tables::place_tagged(&mut blocks, structure::recover(tagged, &items)),
-                Err(e) => log::debug!("tagged tables skipped: {e}"),
-            }
-        }
+        recognize(bytes, doc, &mut blocks);
     }
     tables::merge_continued(&mut blocks);
     tables::tidy(&mut blocks);
@@ -102,6 +92,62 @@ pub fn parse(bytes: &[u8]) -> Result<Document, ConvertError> {
         )));
     }
     Ok(document)
+}
+
+/// Tables and figures pdf-inspector's layout analysis misreads: a tagged
+/// PDF's own tables, and regions the page's rules and shapes delimit.
+fn recognize(bytes: &[u8], doc: &lopdf::Document, blocks: &mut Vec<markdown::Located>) {
+    use std::collections::{HashMap, HashSet};
+    let tagged = structure::tagged_tables(doc);
+    let tagged_pages: HashSet<u32> = tagged
+        .iter()
+        .flat_map(|t| t.rows.iter().flatten().flat_map(|c| c.content.iter().map(|(p, _)| *p)))
+        .collect();
+    // Pages that draw something a table or figure could be made of.
+    let geometries: Vec<(u32, geometry::PageGeometry)> = doc
+        .get_pages()
+        .into_iter()
+        .map(|(page, id)| (page, geometry::page_geometry(doc, id)))
+        .filter(|(_, g)| layout::worth_reading(g))
+        .collect();
+    // Only the pages that need it have their text read again.
+    let pages: HashSet<u32> =
+        tagged_pages.iter().copied().chain(geometries.iter().map(|(p, _)| *p)).collect();
+    if pages.is_empty() {
+        return;
+    }
+    let items = match pdf_inspector::extractor::extract_text_with_positions_mem_pages(
+        bytes,
+        Some(&pages),
+    ) {
+        Ok(items) => items,
+        Err(e) => {
+            log::debug!("table and figure recognition skipped: {e}");
+            return;
+        }
+    };
+    // A tagged table says which cells there are, but producers often leave
+    // out the spans and fold captions into it: where the page's rules frame
+    // a table too, the one read from them replaces it below.
+    if !tagged.is_empty() {
+        tables::place_tagged(blocks, structure::recover(tagged, &items));
+    }
+    let mut by_page: HashMap<u32, Vec<pdf_inspector::TextItem>> = HashMap::new();
+    for item in items {
+        by_page.entry(item.page).or_default().push(item);
+    }
+    let mut found = Vec::new();
+    let mut lines = HashMap::new();
+    for (page, geometry) in &geometries {
+        let Some(items) = by_page.get(page) else { continue };
+        let chunks = layout::chunks(items);
+        let on_page = layout::find(*page, geometry, &chunks);
+        if !on_page.is_empty() {
+            lines.insert(*page, layout::page_lines(&chunks));
+        }
+        found.extend(on_page);
+    }
+    tables::place_found(blocks, found, &lines);
 }
 
 fn map_error(e: PdfError) -> ConvertError {

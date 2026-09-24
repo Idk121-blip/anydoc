@@ -2356,6 +2356,207 @@ def tables_pdf():
     (OUT / "pdf" / "handmade-tables.pdf").write_bytes(pdf_file(objs))
 
 
+# Layout PDFs: three fonts, text placed by coordinates, rules drawn as thin
+# filled rectangles the way office suites and InDesign export them.
+LAYOUT_FONTS = b"/Font << /F1 3 0 R /F2 4 0 R /F3 5 0 R >>"
+
+
+def layout_text(x, y, size, text, font="F1"):
+    escaped = text.replace("\\", "\\\\").replace("(", "\\(").replace(")", "\\)")
+    return b"BT /%s %d Tf %.1f %.1f Td (%s) Tj ET\n" % (
+        font.encode(), size, x, y, escaped.encode("latin-1"))
+
+
+def layout_width(text, size, font="F1"):
+    return len(text) * size * (0.55 if font == "F2" else 0.5)
+
+
+def layout_right(x, y, size, text, font="F1"):
+    return layout_text(x - layout_width(text, size, font), y, size, text, font)
+
+
+def layout_center(x, y, size, text, font="F1"):
+    return layout_text(x - layout_width(text, size, font) / 2, y, size, text, font)
+
+
+def layout_fill(x, y, w, h, gray=0.0):
+    return b"%.2f g %.1f %.1f %.1f %.1f re f 0 g\n" % (gray, x, y, w, h)
+
+
+def layout_pdf(pages):
+    objs = {
+        1: b"<< /Type /Catalog /Pages 2 0 R >>",
+        3: b"<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica /Encoding /WinAnsiEncoding >>",
+        4: b"<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica-Bold /Encoding /WinAnsiEncoding >>",
+        5: b"<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica-Oblique /Encoding /WinAnsiEncoding >>",
+    }
+    kids = []
+    for n, content in enumerate(pages):
+        page, stream = 6 + 2 * n, 7 + 2 * n
+        objs[page] = (b"<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Resources << "
+                      + LAYOUT_FONTS + b" >> /Contents %d 0 R >>" % stream)
+        objs[stream] = pdf_stream(b"", content)
+        kids.append(page)
+    objs[2] = (b"<< /Type /Pages /Kids [" + b" ".join(b"%d 0 R" % k for k in kids)
+               + b"] /Count %d >>" % len(kids))
+    return pdf_file(objs)
+
+
+LAYOUT_PROSE = [
+    "Nel corso dell'anno sono pervenute oltre novantottomila segnalazioni di operazioni",
+    "sospette, in aumento rispetto all'anno precedente; la crescita riguarda soprattutto",
+    "gli operatori di gioco e gli intermediari finanziari diversi dalle banche, mentre",
+    "le segnalazioni di matrice bancaria restano sostanzialmente stabili nel periodo.",
+]
+
+
+def grouped_pdf():
+    """A statistics table ruled only horizontally: a title band, year labels grouping
+    two and three columns over one unbroken rule, a stub head spanning both header
+    tiers, a row label wrapped over two lines, and a note under the table."""
+    c = b""
+    y = 780
+    for line in LAYOUT_PROSE:
+        c += layout_text(60, y, 11, line)
+        y -= 14
+    c += layout_right(535, 712, 10, "Tavola 1.2", "F3")
+    c += layout_fill(60, 682, 475, 22, 0.8)
+    c += layout_center(297, 690, 10, "Segnalazioni ricevute per tipologia di segnalante", "F2")
+    c += layout_fill(60, 704, 475, 0.5) + layout_fill(60, 682, 475, 0.5)
+    # One rule under both year groups, in cell-sized pieces that touch.
+    c += layout_fill(220, 652, 120, 0.5) + layout_fill(340, 652, 0.5, 0.5) + layout_fill(340.5, 652, 194.5, 0.5)
+    c += layout_center(290, 660, 10, "2017", "F2") + layout_center(452, 660, 10, "2018", "F2")
+    c += layout_center(130, 640, 10, "TIPOLOGIA") + layout_center(130, 628, 10, "DI SEGNALANTE")
+    subheads = [(255, ["(valori", "assoluti)"]), (318, ["(quote %)"]), (385, ["(valori", "assoluti)"]),
+                (447, ["(quote %)"]), (505, ["(var. %", "rispetto al", "2017)"])]
+    for x, lines in subheads:
+        top = 640 + 5 * (len(lines) - 1)
+        for n, line in enumerate(lines):
+            c += layout_center(x, top - 10 * n, 8, line, "F3")
+    c += layout_fill(60, 612, 475, 0.5)
+    rows = [
+        (["Totale"], ["93.820", "100,0", "98.030", "100,0", "4,5"], "F2"),
+        (["Banche e Poste"], ["72.171", "76,9", "71.054", "72,5", "-1,5"], "F1"),
+        (["Societa' di gestione dei mer-", "cati e strumenti finanziari"], ["5", "0,0", "11", "0,0", "120,0"], "F1"),
+        (["Professionisti"], ["4.969", "5,3", "4.818", "4,9", "-3,0"], "F1"),
+    ]
+    y = 598
+    for labels, values, font in rows:
+        for n, label in enumerate(labels):
+            c += layout_text(62 + (6 if n else 0), y, 10, label, font)
+            if n + 1 < len(labels):
+                y -= 12
+        for x, value in zip([270, 330, 400, 460, 525], values):
+            c += layout_right(x, y, 10, value, font)
+        y -= 16
+    c += layout_fill(60, y + 8, 475, 0.5)
+    c += layout_text(60, y - 4, 8, "(1) Dati provvisori per l'ultimo anno.")
+    y -= 30
+    for line in LAYOUT_PROSE[:2]:
+        c += layout_text(60, y, 11, line)
+        y -= 14
+    (OUT / "pdf" / "handmade-grouped.pdf").write_bytes(layout_pdf([c]))
+
+
+def split_pdf():
+    """Two columns split by a vertical rule over two pages, entries not aligned
+    across the rule, section titles in the gaps the rule leaves, a running head."""
+    left_x, right_x, sep = 70, 310, 297
+
+    def running_head(page_no):
+        return (layout_text(57, 810, 8, "Alberghi") + layout_right(553, 810, 8, "55.10.00")
+                + layout_fill(57, 805, 496, 0.5) + layout_right(553, 30, 8, str(page_no)))
+
+    def entries(c, y, items, x):
+        for lines in items:
+            for n, line in enumerate(lines):
+                c += layout_text(x, y - 14 * n, 10, line)
+            y -= 14 * (len(lines) - 1) + 23
+        return c, y
+
+    def column_block(c, top, left, right):
+        c, left_end = entries(c, top, left, left_x)
+        c, right_end = entries(c, top, right, right_x)
+        bottom = min(left_end, right_end) + 14
+        c += layout_fill(sep, bottom, 0.5, top + 12 - bottom)
+        return c, bottom
+
+    p1 = running_head(1)
+    y = 780
+    for line in LAYOUT_PROSE:
+        p1 += layout_text(57, y, 11, line)
+        y -= 14
+    p1 += layout_center(180, 700, 10, "Persona fisica", "F2") + layout_center(425, 700, 10, "Persona non fisica", "F2")
+    p1 += layout_fill(sep, 690, 0.5, 24) + layout_fill(51, 690, 486, 0.5)
+    p1 += layout_center(297, 674, 8, "INFORMAZIONI ANAGRAFICHE", "F3")
+    p1, bottom = column_block(p1, 650, [
+        ["codice fiscale"],
+        ["domicilio fiscale (ed eventuali variazioni)"],
+        ["ufficio dell'Agenzia delle entrate", "competente sul soggetto"],
+        ["famiglia fiscale"],
+    ], [
+        ["codice fiscale"],
+        ["sede legale (ed eventuali variazioni)"],
+        ["domicilio fiscale (ed eventuali variazioni)"],
+        ["ufficio dell'Agenzia delle entrate", "competente sul soggetto"],
+    ])
+    p1 += layout_center(297, bottom - 16, 8, "INFORMAZIONI REDDITUALI", "F3")
+    p1, bottom = column_block(p1, bottom - 40, [
+        ["dati delle dichiarazioni dei redditi"],
+        ["dati dei rimborsi"],
+    ], [
+        ["dati delle dichiarazioni dei redditi", "e quello in corso"],
+        ["dati dei rimborsi"],
+    ])
+    p2 = running_head(2)
+    p2, bottom = column_block(p2, 770, [
+        ["presenza e dati dei ricorsi"],
+        ["presenza e dati dei versamenti", "con modello F24"],
+    ], [
+        ["presenza e dati dei ricorsi"],
+        ["presenza e dati dei versamenti con", "modello F24 e F23"],
+    ])
+    y = bottom - 40
+    for line in LAYOUT_PROSE[2:]:
+        p2 += layout_text(57, y, 11, line)
+        y -= 14
+    (OUT / "pdf" / "handmade-split.pdf").write_bytes(layout_pdf([p1, p2]))
+
+
+def chart_pdf():
+    """A bar chart drawn with path bars, with values over the bars, axis ticks and a
+    legend: labels on a figure, not the cells of a table."""
+    c = b""
+    y = 780
+    for line in LAYOUT_PROSE:
+        c += layout_text(60, y, 11, line)
+        y -= 14
+    c += layout_right(535, 712, 10, "Figura 1.5", "F3")
+    c += layout_center(297, 696, 10, "Tempi di inoltro delle segnalazioni", "F2")
+    x0, y0, h = 110, 480, 190
+    for v in range(0, 101, 20):
+        c += layout_right(x0 - 6, y0 + h * v / 100 - 3, 9, str(v))
+    classes = ["<=7gg", "7<gg<=15", "15<gg<=30", "30<gg<=60", "60<gg<=90", ">90gg"]
+    values = [14.0, 16.4, 20.0, 18.2, 9.1, 22.3]
+    total = 0.0
+    for n, (label, value) in enumerate(zip(classes, values)):
+        total += value
+        bx = x0 + 12 + n * 70
+        for dx, v, gray in ((0, value, 0.5), (24, total, 0.2)):
+            top = y0 + h * v / 100
+            c += b"%.2f g %.1f %.1f m %.1f %.1f l %.1f %.1f l %.1f %.1f l h f 0 g\n" % (
+                gray, bx + dx, y0, bx + dx + 22, y0, bx + dx + 22, top, bx + dx, top)
+            c += layout_center(bx + dx + 11, top + 3, 8, ("%.1f" % v).replace(".", ","))
+        c += layout_center(bx + 23, y0 - 12, 7, label)
+    c += layout_fill(170, 440, 8, 8, 0.5) + layout_text(182, 441, 9, "valori per classe temporale")
+    c += layout_fill(330, 440, 8, 8, 0.2) + layout_text(342, 441, 9, "valori cumulati")
+    y = 410
+    for line in LAYOUT_PROSE[:2]:
+        c += layout_text(60, y, 11, line)
+        y -= 14
+    (OUT / "pdf" / "handmade-chart.pdf").write_bytes(layout_pdf([c]))
+
+
 def ocr_pdfs():
     """A scan (image-only pages) and a mixed document (a text page then a scanned one)."""
     (OUT / "pdf" / "handmade-scanned.pdf").write_bytes(handmade_pdf([IMAGE_PAGE, IMAGE_PAGE]))
@@ -2418,6 +2619,9 @@ def main():
     ocr_pdfs()
     images_pdf()
     tables_pdf()
+    grouped_pdf()
+    split_pdf()
+    chart_pdf()
     math_odt()
     math_epub()
     math_rtf()

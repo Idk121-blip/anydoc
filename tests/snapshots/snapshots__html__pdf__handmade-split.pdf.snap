@@ -1,0 +1,51 @@
+---
+source: tests/snapshots.rs
+expression: output
+---
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Document</title>
+<style>
+body { font-family: system-ui, sans-serif; line-height: 1.5; max-width: 50rem; margin: 2rem auto; padding: 0 1rem; }
+table { border-collapse: collapse; margin: 1rem 0; }
+th, td { border: 1px solid #999; padding: 0.25rem 0.5rem; vertical-align: top; }
+table.layout, table.layout td { border: none; }
+img { max-width: 100%; }
+pre { overflow-x: auto; }
+</style>
+</head>
+<body>
+<p>Alberghi 55.10.00</p>
+<p>Nel corso dell&#39;anno sono pervenute oltre novantottomila segnalazioni di operazioni sospette, in aumento rispetto all&#39;anno precedente; la crescita riguarda soprattutto gli operatori di gioco e gli intermediari finanziari diversi dalle banche, mentre le segnalazioni di matrice bancaria restano sostanzialmente stabili nel periodo.</p>
+<table>
+<thead>
+<tr><th><strong>Persona fisica</strong></th><th><strong>Persona non fisica</strong></th></tr>
+</thead>
+<tbody>
+<tr><td colspan="2"><em>INFORMAZIONI ANAGRAFICHE</em></td></tr>
+<tr><td>codice fiscale</td><td>codice fiscale</td></tr>
+<tr><td>domicilio fiscale (ed eventuali variazioni)</td><td>sede legale (ed eventuali variazioni)</td></tr>
+<tr><td>
+<p>ufficio dell&#39;Agenzia delle entrate competente sul soggetto</p>
+<p>famiglia fiscale</p>
+</td><td>
+<p>domicilio fiscale (ed eventuali variazioni)</p>
+<p>ufficio dell&#39;Agenzia delle entrate competente sul soggetto</p>
+</td></tr>
+<tr><td colspan="2"><em>INFORMAZIONI REDDITUALI</em></td></tr>
+<tr><td>
+<p>dati delle dichiarazioni dei redditi</p>
+<p>dati dei rimborsi</p>
+</td><td>dati delle dichiarazioni dei redditi e quello in corso</td></tr>
+<tr><td></td><td>dati dei rimborsi</td></tr>
+<tr><td>presenza e dati dei ricorsi</td><td>presenza e dati dei ricorsi</td></tr>
+<tr><td>presenza e dati dei versamenti con modello F24</td><td>presenza e dati dei versamenti con modello F24 e F23</td></tr>
+</tbody>
+</table>
+<p>Alberghi 55.10.00</p>
+<p>gli operatori di gioco e gli intermediari finanziari diversi dalle banche, mentre le segnalazioni di matrice bancaria restano sostanzialmente stabili nel periodo.</p>
+</body>
+</html>

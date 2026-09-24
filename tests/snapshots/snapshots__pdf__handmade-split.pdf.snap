@@ -1,0 +1,23 @@
+---
+source: tests/snapshots.rs
+expression: output
+---
+Alberghi 55.10.00
+
+Nel corso dell'anno sono pervenute oltre novantottomila segnalazioni di operazioni sospette, in aumento rispetto all'anno precedente; la crescita riguarda soprattutto gli operatori di gioco e gli intermediari finanziari diversi dalle banche, mentre le segnalazioni di matrice bancaria restano sostanzialmente stabili nel periodo.
+
+| **Persona fisica** | **Persona non fisica** |
+| --- | --- |
+| *INFORMAZIONI ANAGRAFICHE* |  |
+| codice fiscale | codice fiscale |
+| domicilio fiscale (ed eventuali variazioni) | sede legale (ed eventuali variazioni) |
+| ufficio dell'Agenzia delle entrate competente sul soggetto<br>famiglia fiscale | domicilio fiscale (ed eventuali variazioni)<br>ufficio dell'Agenzia delle entrate competente sul soggetto |
+| *INFORMAZIONI REDDITUALI* |  |
+| dati delle dichiarazioni dei redditi<br>dati dei rimborsi | dati delle dichiarazioni dei redditi e quello in corso |
+|  | dati dei rimborsi |
+| presenza e dati dei ricorsi | presenza e dati dei ricorsi |
+| presenza e dati dei versamenti con modello F24 | presenza e dati dei versamenti con modello F24 e F23 |
+
+Alberghi 55.10.00
+
+gli operatori di gioco e gli intermediari finanziari diversi dalle banche, mentre le segnalazioni di matrice bancaria restano sostanzialmente stabili nel periodo.
