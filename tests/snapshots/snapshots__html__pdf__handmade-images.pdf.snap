@@ -1,0 +1,29 @@
+---
+source: tests/snapshots.rs
+expression: output
+---
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Figures</title>
+<style>
+body { font-family: system-ui, sans-serif; line-height: 1.5; max-width: 50rem; margin: 2rem auto; padding: 0 1rem; }
+table { border-collapse: collapse; margin: 1rem 0; }
+th, td { border: 1px solid #999; padding: 0.25rem 0.5rem; vertical-align: top; }
+table.layout, table.layout td { border: none; }
+img { max-width: 100%; }
+pre { overflow-x: auto; }
+</style>
+</head>
+<body>
+<h1 id="figures">Figures</h1>
+<p>Quarterly figures for the northern region, as reported by each branch. Sales rose in every branch but one, and returns held steady throughout. Staffing changed at two branches, which the notes at the end explain. Figures are in thousands, rounded to the nearest whole unit. Where a branch reported late, its previous quarter stands in. Seasonal adjustment follows the method used in earlier reports. The chart below breaks the total down by product line and month.</p>
+<p>A drawn chart follows.</p>
+<p><img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAIAAAACCAYAAABytg0kAAAAGElEQVR4AQKM4T8Dw38wZGD43/D//38GAEZOCHmbmFSmAAAAAElFTkSuQmCC" alt=""></p>
+<p>A photo follows.</p>
+<p><img src="data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/4gHYSUNDX1BST0ZJTEUAAQEAAAHIAAAAAAQwAABtbnRyUkdCIFhZWiAH4AABAAEAAAAAAABhY3NwAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAQAA9tYAAQAAAADTLQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAlkZXNjAAAA8AAAACRyWFlaAAABFAAAABRnWFlaAAABKAAAABRiWFlaAAABPAAAABR3dHB0AAABUAAAABRyVFJDAAABZAAAAChnVFJDAAABZAAAAChiVFJDAAABZAAAAChjcHJ0AAABjAAAADxtbHVjAAAAAAAAAAEAAAAMZW5VUwAAAAgAAAAcAHMAUgBHAEJYWVogAAAAAAAAb6IAADj1AAADkFhZWiAAAAAAAABimQAAt4UAABjaWFlaIAAAAAAAACSgAAAPhAAAts9YWVogAAAAAAAA9tYAAQAAAADTLXBhcmEAAAAAAAQAAAACZmYAAPKnAAANWQAAE9AAAApbAAAAAAAAAABtbHVjAAAAAAAAAAEAAAAMZW5VUwAAACAAAAAcAEcAbwBvAGcAbABlACAASQBuAGMALgAgADIAMAAxADb/2wBDAAYEBQYFBAYGBQYHBwYIChAKCgkJChQODwwQFxQYGBcUFhYaHSUfGhsjHBYWICwgIyYnKSopGR8tMC0oMCUoKSj/2wBDAQcHBwoIChMKChMoGhYaKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCj/wAARCAAEAAQDASIAAhEBAxEB/8QAFQABAQAAAAAAAAAAAAAAAAAAAAb/xAAZEAADAQEBAAAAAAAAAAAAAAAAAQIDETH/xAAVAQEBAAAAAAAAAAAAAAAAAAAFB//EABcRAQEBAQAAAAAAAAAAAAAAAAIBABH/2gAMAwEAAhEDEQA/AJPLOcoUQuSvEAANtNVK9t1VJgkJnJN//9k=" alt=""></p>
+<p>End of figures.</p>
+</body>
+</html>

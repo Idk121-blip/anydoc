@@ -6,7 +6,7 @@
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 [![skills.sh](https://skills.sh/b/firecrawl/anydoc)](https://skills.sh/firecrawl/anydoc)
 
-Fast Rust library that converts documents (Word, PowerPoint, Excel, OpenDocument, RTF, EPUB, CSV, and PDF) into clean GitHub-Flavored Markdown. Includes bindings for [Node.js](node/README.md), [Python](python/README.md), and the [browser](wasm/README.md) (WebAssembly).
+Fast Rust library that converts documents (Word, PowerPoint, Excel, OpenDocument, RTF, EPUB, CSV, and PDF) into clean GitHub-Flavored Markdown, or into HTML. Includes bindings for [Node.js](node/README.md), [Python](python/README.md), and the [browser](wasm/README.md) (WebAssembly).
 
 Built by [Firecrawl](https://firecrawl.dev) to turn any office document into LLM-ready Markdown in single-digit milliseconds, with one consistent output no matter which format goes in. It powers [Firecrawl Parse](https://firecrawl.dev/parse), so if you'd rather not run it yourself, the hosted API gives you the same conversion plus our OCR models for the scanned pages anydoc can't read on its own.
 
@@ -29,6 +29,7 @@ The [skill](skills/convert-documents-to-markdown/SKILL.md) teaches the agent to 
 ```bash
 npx @firecrawl/anydoc report.docx               # Markdown to stdout
 npx @firecrawl/anydoc slides.pptx -o slides.md  # or to a file
+npx @firecrawl/anydoc report.pdf --to html      # HTML page, images inline
 npx @firecrawl/anydoc - --format csv < data.csv # read stdin
 npx @firecrawl/anydoc scan.pdf --ocr hosted     # scanned pages via Firecrawl Parse
 ```
@@ -42,7 +43,7 @@ npm install @firecrawl/anydoc
 ```
 
 ```js
-import { toDocument, toMarkdown, toMarkdownBytes } from '@firecrawl/anydoc';
+import { toDocument, toHtml, toMarkdown, toMarkdownBytes } from '@firecrawl/anydoc';
 
 // From a file path:
 const markdown = await toMarkdown('report.docx');
@@ -58,6 +59,9 @@ const fromCsv = await toMarkdownBytes(bytes, 'csv');
 
 // Or stop at the document model, which also carries embedded assets:
 const document = await toDocument(bytes);
+
+// Or get a standalone HTML page (toHtmlBytes for bytes):
+const html = await toHtml('report.pdf');
 ```
 
 > Full API reference: [node/README.md](node/README.md)
@@ -85,6 +89,9 @@ markdown = anydoc.to_markdown_bytes(data, "csv")
 
 # Or stop at the document model, which also carries embedded assets:
 document = anydoc.to_document(data)
+
+# Or get a standalone HTML page (to_html_bytes for bytes):
+html = anydoc.to_html("report.pdf")
 ```
 
 > Full API reference: [python/README.md](python/README.md)
@@ -130,7 +137,20 @@ let markdown = anydoc::to_markdown_bytes(&bytes, anydoc::Format::Csv)?;
 
 // Or stop at the document model, which also carries embedded assets:
 let document = anydoc::to_document(&bytes, None)?;
+
+// Or get a standalone HTML page (to_html_bytes for bytes):
+let html = anydoc::to_html("report.pdf")?;
 ```
+
+## HTML output
+
+Every format also converts to a standalone HTML page, through the same document model: `to_html` / `to_html_bytes` in Rust and Python, `toHtml` / `toHtmlBytes` in Node, `toHtmlBytes` in the browser, `--to html` on the CLI. HTML keeps what Markdown cannot:
+
+- merged table cells stay merged, as `colspan` and `rowspan`;
+- list numbering keeps its style (`a.`, `iv.`, start values);
+- embedded images show inline as `data:` URIs, so the page is self-contained.
+
+Output is escaped throughout and only inert link schemes survive, so a page converted from an untrusted document is safe to open. From Rust, `document_to_html` renders a parsed `Document` with `HtmlOptions`: `fragment` drops the page around the body, and `asset_prefix` links images to files you write out (`{prefix}{index}.{Asset::extension}`) instead of inlining them. Hosted OCR returns Markdown only.
 
 ## OCR
 
@@ -149,11 +169,11 @@ Only documents that need OCR leave the machine, and the whole document goes, sin
 - **One output for every format.** Each format parses into a shared document model and renders through a single Markdown serializer, so escaping, tables, heading anchors, and footnotes behave identically whether the input was a `.doc` from 2003 or a `.pptx` from yesterday.
 - **Full document structure.** Headings with anchors, bold/italic/strikethrough, inline code and code blocks, links and internal cross-references, bulleted/numbered/nested/task lists with the source's own numbering, tables with merged cells and header rows, block quotes, footnotes and endnotes, and speaker notes.
 - **Equations as LaTeX.** Word and PowerPoint (OMML), OpenDocument and EPUB (MathML), and RTF equations convert to GitHub-flavored math: `$...$` inline and `$$` blocks.
-- **Embedded assets.** Images and embedded objects render as their alt text in the Markdown, and the raw bytes stay available on the document model, tagged with their media type. Images with an external URL become ordinary Markdown images.
+- **Embedded assets.** Images and embedded objects render as their alt text in the Markdown, and the raw bytes stay available on the document model, tagged with their media type. HTML output shows images inline. Images with an external URL become ordinary Markdown images.
 - **Content-based format detection.** The format is read from the bytes themselves (PDF header, RTF open group, OLE stream names, ZIP package mimetype), so mislabeled files still convert correctly.
 - **Fast.** Pure Rust, no ML models, no external services. Median conversion time is under 5ms per document.
 - **Bindings that stay out of the way.** Node.js conversion runs on the libuv thread pool and never blocks the event loop; Python releases the GIL so other threads keep running. TypeScript types and Python stubs ship with the packages.
-- **PDF support built in.** Text-based PDFs convert locally through [pdf-inspector](https://github.com/firecrawl/pdf-inspector), no OCR service required. Scanned pages can opt into [hosted OCR](#scanned-pdfs-ocr).
+- **PDF support built in.** Text-based PDFs convert locally through [pdf-inspector](https://github.com/firecrawl/pdf-inspector), no OCR service required, into the same document model as every other format. Images drawn on a page become assets in place (JPEG as is, raw samples as PNG with their soft mask as alpha). Tables are recognized from the page layout, from a tagged PDF's own structure (which also recovers borderless tables and merged cells), and are rejoined when they break across pages. Scanned pages can opt into [hosted OCR](#ocr).
 - **Agent ready.** Ships as an [Agent Skill](#agent-skill): one `npx skills add firecrawl/anydoc` and any agent can read office documents.
 
 ## Supported formats
@@ -266,12 +286,14 @@ document bytes
   │         └─► Document     → shared model: blocks, inlines, tables,
   │                            footnotes, assets
   │               │
-  │               └─► GFM serializer → Markdown
+  │               ├─► GFM serializer  → Markdown
+  │               └─► HTML serializer → HTML
   │
-  └─► PDF → pdf-inspector    → Markdown directly
+  └─► PDF → pdf-inspector    → layout Markdown, read back into the Document,
+                               plus images and tagged tables via lopdf
 ```
 
-Because every format funnels through the same document model and serializer, output quirks get fixed once. A table-escaping fix for docx is automatically a table-escaping fix for rtf, odt, and everything else.
+Because every format funnels through the same document model and serializers, output quirks get fixed once. A table-escaping fix for docx is automatically a table-escaping fix for rtf, odt, and everything else.
 
 ## Development
 

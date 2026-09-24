@@ -1,4 +1,4 @@
-"""Convert documents to GitHub-Flavored Markdown."""
+"""Convert documents to GitHub-Flavored Markdown or HTML."""
 
 import json
 import os
@@ -34,6 +34,8 @@ from anydoc._anydoc import (
     format_from_extension,
     format_from_path,
     to_document,
+    to_html,
+    to_html_bytes,
 )
 from anydoc._anydoc import to_markdown as _to_markdown
 from anydoc._anydoc import to_markdown_bytes as _to_markdown_bytes
@@ -208,6 +210,8 @@ __all__ = [
     "format_from_extension",
     "format_from_path",
     "to_document",
+    "to_html",
+    "to_html_bytes",
     "to_markdown",
     "to_markdown_bytes",
 ]

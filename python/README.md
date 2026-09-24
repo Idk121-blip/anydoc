@@ -3,7 +3,7 @@
 [![PyPI](https://img.shields.io/pypi/v/firecrawl-anydoc.svg)](https://pypi.org/project/firecrawl-anydoc/)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](https://github.com/firecrawl/anydoc/blob/main/LICENSE)
 
-Convert Word, PowerPoint, Excel, OpenDocument, RTF, EPUB, CSV, and PDF files into clean GitHub-Flavored Markdown. Python bindings for the [anydoc](https://github.com/firecrawl/anydoc) Rust crate, built by [Firecrawl](https://firecrawl.dev). Also available as a hosted API through [Firecrawl Parse](https://firecrawl.dev/parse), which adds our OCR models for the scanned pages anydoc can't read on its own.
+Convert Word, PowerPoint, Excel, OpenDocument, RTF, EPUB, CSV, and PDF files into clean GitHub-Flavored Markdown or HTML. Python bindings for the [anydoc](https://github.com/firecrawl/anydoc) Rust crate, built by [Firecrawl](https://firecrawl.dev). Also available as a hosted API through [Firecrawl Parse](https://firecrawl.dev/parse), which adds our OCR models for the scanned pages anydoc can't read on its own.
 
 Every format parses into one shared document model and renders through a single Markdown serializer, so headings, tables, lists, and footnotes come out the same no matter which format goes in. Conversion releases the GIL, so other threads keep running. Type stubs ship with the package.
 
@@ -42,7 +42,14 @@ markdown = anydoc.to_markdown_bytes(data, "csv")
 
 # Or stop at the document model, which also carries embedded assets:
 document = anydoc.to_document(data)
+
+# Or get a standalone HTML page, from a path or (to_html_bytes) from bytes:
+html = anydoc.to_html("report.pdf")
 ```
+
+## HTML output
+
+`to_html` and `to_html_bytes` write a standalone HTML page. HTML keeps what Markdown cannot: merged table cells stay merged (`colspan`/`rowspan`), list numbering keeps its style, and embedded images show inline as `data:` URIs. Hosted OCR returns Markdown only, so the HTML functions take no `ocr` option.
 
 ## Scanned pages
 
@@ -90,7 +97,7 @@ anydoc.format_from_path("report.odt")  # 'odt'
 
 ## Images and embedded objects
 
-Markdown cannot embed bytes, so an embedded image renders as its alt text while the bytes stay on `document.assets`, tagged with a media type and the part they came from. Images that carry an external URL render as ordinary Markdown images.
+Markdown cannot embed bytes, so an embedded image renders as its alt text while the bytes stay on `document.assets` (HTML output shows them inline), tagged with a media type and the part they came from. Images that carry an external URL render as ordinary Markdown images.
 
 Full behavior notes and benchmarks live in the [repository README](https://github.com/firecrawl/anydoc#readme).
 

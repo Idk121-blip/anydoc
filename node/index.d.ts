@@ -21,7 +21,7 @@ export type ConvertErrorCode =
   | 'resourceLimit'
   /** A part required for any meaningful output is absent. */
   | 'missingPart'
-  /** The file could not be read, from `toMarkdown` only. */
+  /** The file could not be read, from `toMarkdown` or `toHtml` only. */
   | 'io'
   /** `ocr: 'hosted'` could not get the document through Firecrawl Parse. */
   | 'hosted'
@@ -118,10 +118,11 @@ export declare const enum Format {
   docx = 'docx',
   odt = 'odt',
   /**
-   * Converted with pdf-inspector, which emits Markdown directly:
-   * `toDocument` is unsupported for PDFs. Scanned or image-only pages
-   * need OCR, which anydoc does not do: the document rejects with
-   * `needsOcr` naming them.
+   * Text-based PDFs, read with pdf-inspector. Embedded images become
+   * assets, and a tagged PDF's own table structure replaces what layout
+   * analysis made of its tables. Scanned or image-only pages need OCR,
+   * which anydoc does not do: the document rejects with `needsOcr` naming
+   * them.
    */
   pdf = 'pdf',
   ppt = 'ppt',
@@ -288,12 +289,28 @@ export declare const enum TableKind {
  * Parse an in-memory document into the document model, which also carries
  * the embedded assets. Without a format, it is detected from the content.
  *
- * Unsupported for `pdf`: PDF conversion produces Markdown directly and has
- * no document-model form; use `toMarkdownBytes`.
- *
  * Rejects with an `Error` carrying a `ConvertErrorCode` on `code`.
  */
 export declare function toDocument(bytes: Uint8Array, format?: Format | undefined | null): Promise<Document>
+
+/**
+ * Convert a document file to a standalone HTML page, embedded images
+ * included as `data:` URIs. The format is detected as for `toMarkdown`.
+ * HTML keeps what Markdown cannot: merged table cells, list numbering
+ * styles, and the images themselves.
+ *
+ * Rejects with an `Error` carrying a `ConvertErrorCode` on `code`; a file
+ * that cannot be read is `'io'`.
+ */
+export declare function toHtml(path: string): Promise<string>
+
+/**
+ * Convert an in-memory document to a standalone HTML page. The format is
+ * as for `toMarkdownBytes`.
+ *
+ * Rejects with an `Error` carrying a `ConvertErrorCode` on `code`.
+ */
+export declare function toHtmlBytes(bytes: Uint8Array, format?: Format | undefined | null): Promise<string>
 
 /**
  * Convert a document file to Markdown. The format is detected from the file

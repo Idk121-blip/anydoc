@@ -14,6 +14,7 @@ Run the anydoc CLI. It needs Node 20+ and no install:
 npx -y @firecrawl/anydoc <file>              # Markdown to stdout
 npx -y @firecrawl/anydoc <file> -o out.md    # write to a file
 npx -y @firecrawl/anydoc - --format csv < f  # read stdin
+npx -y @firecrawl/anydoc <file> --to html    # HTML page instead
 ```
 
 Rules:
@@ -23,4 +24,5 @@ Rules:
 3. Exit codes: 0 success, 1 the document could not be converted, 2 usage error, 3 pages of a PDF need OCR. Failures print one `anydoc: <message>` line to stderr. The CLI never prompts.
 4. For a large document, write to a file with `-o` and read the parts you need instead of streaming everything into context.
 5. Scanned and image-only pages need OCR, which anydoc does not do, so the document exits 3. Rerun with `--ocr hosted` to send it to [Firecrawl Parse](https://firecrawl.dev/parse). No signup needed. Pass `--api-key` or set `FIRECRAWL_API_KEY` for higher limits.
-6. Inside a Node, Python, or Rust codebase, prefer the library over shelling out: `@firecrawl/anydoc` on npm, `firecrawl-anydoc` on PyPI, `anydoc` on crates.io. Each exposes the same `to_markdown` / `toMarkdown` API.
+6. Prefer Markdown for reading. Use `--to html` when the output is for a browser or must keep merged table cells and embedded images; the page carries images as `data:` URIs, so it can be large.
+7. Inside a Node, Python, or Rust codebase, prefer the library over shelling out: `@firecrawl/anydoc` on npm, `firecrawl-anydoc` on PyPI, `anydoc` on crates.io. Each exposes the same `to_markdown` / `toMarkdown` API.

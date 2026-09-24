@@ -20,6 +20,8 @@ CSV = FIXTURES / "csv" / "sheet.csv"
 ENCRYPTED = FIXTURES / "malformed" / "encrypted--errors.odt"
 ZIPBOMB = FIXTURES / "abuse" / "zipbomb--errors.docx"
 MIXED = FIXTURES / "pdf" / "handmade-mixed.pdf"
+PDF_IMAGES = FIXTURES / "pdf" / "handmade-images.pdf"
+PDF_TAGGED = FIXTURES / "pdf" / "text.pdf"
 
 HOSTED_MARKDOWN = "# Read by the hosted parser\n"
 
@@ -92,6 +94,20 @@ class AnydocTest(unittest.TestCase):
         self.assertIsInstance(image.data, bytes)
         self.assertGreater(len(image.data), 0)
         self.assertEqual(image.id, document.assets.index(image))
+
+    def test_to_document_reads_pdfs_images_included(self):
+        document = anydoc.to_document(PDF_IMAGES.read_bytes())
+        self.assertEqual([a.media_type for a in document.assets], ["image/png", "image/jpeg"])
+
+    def test_to_html_keeps_merged_cells_and_inlines_images(self):
+        html = anydoc.to_html(PDF_TAGGED)
+        self.assertTrue(html.startswith("<!DOCTYPE html>"))
+        self.assertIn('<td colspan="2">Wide head</td>', html)
+        self.assertIn('<td rowspan="2">Tall</td>', html)
+        images = anydoc.to_html_bytes(PDF_IMAGES.read_bytes(), "pdf")
+        self.assertIn('<img src="data:image/jpeg;base64,', images)
+        with self.assertRaises(anydoc.UnsupportedError):
+            anydoc.to_html_bytes(CSV.read_bytes())
 
     def test_format_detection_reads_content_extension_and_path(self):
         self.assertEqual(anydoc.format_from_bytes(RICH.read_bytes()), "docx")

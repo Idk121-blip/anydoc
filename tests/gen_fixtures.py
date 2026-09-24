@@ -19,6 +19,7 @@ import struct
 import subprocess
 import sys
 import zipfile
+import zlib
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -2232,6 +2233,129 @@ TEXT_PAGE = b"BT /F1 24 Tf 72 700 Td (Text on the first page) Tj ET"
 IMAGE_PAGE = b"q 468 0 0 648 72 72 cm /Im1 Do Q"
 
 
+# Serialize numbered PDF objects (1 is the catalog) with an exact xref table.
+def pdf_file(objs):
+    out = bytearray(b"%PDF-1.4\n")
+    offsets = {}
+    for num in sorted(objs):
+        offsets[num] = len(out)
+        out += b"%d 0 obj\n" % num + objs[num] + b"\nendobj\n"
+    xref = len(out)
+    size = max(objs) + 1
+    out += b"xref\n0 %d\n0000000000 65535 f \n" % size
+    for num in range(1, size):
+        out += b"%010d 00000 n \n" % offsets[num]
+    out += (b"trailer\n<< /Size %d /Root 1 0 R >>\nstartxref\n%d\n%%%%EOF\n" % (size, xref))
+    return bytes(out)
+
+
+def pdf_stream(dict_body, data):
+    return b"<< " + dict_body + b" /Length %d >>\nstream\n" % len(data) + data + b"\nendstream"
+
+
+def pdf_text(x, y, size, text):
+    return b"BT /F1 %d Tf %d %d Td (%s) Tj ET\n" % (size, x, y, text.encode("latin-1"))
+
+
+# A 4x4 JPEG (a blue quadrant on red), rendered by a browser canvas.
+TINY_JPEG = base64.b64decode(
+    "/9j/4AAQSkZJRgABAQAAAQABAAD/4gHYSUNDX1BST0ZJTEUAAQEAAAHIAAAAAAQwAABtbnRyUkdCIFhZWiAH4AABAAEAAAAAAABh"
+    "Y3NwAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAQAA9tYAAQAAAADTLQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
+    "AAAAAAAAAAAAAAAAAAAAAAAAAAlkZXNjAAAA8AAAACRyWFlaAAABFAAAABRnWFlaAAABKAAAABRiWFlaAAABPAAAABR3dHB0AAAB"
+    "UAAAABRyVFJDAAABZAAAAChnVFJDAAABZAAAAChiVFJDAAABZAAAAChjcHJ0AAABjAAAADxtbHVjAAAAAAAAAAEAAAAMZW5VUwAA"
+    "AAgAAAAcAHMAUgBHAEJYWVogAAAAAAAAb6IAADj1AAADkFhZWiAAAAAAAABimQAAt4UAABjaWFlaIAAAAAAAACSgAAAPhAAAts9Y"
+    "WVogAAAAAAAA9tYAAQAAAADTLXBhcmEAAAAAAAQAAAACZmYAAPKnAAANWQAAE9AAAApbAAAAAAAAAABtbHVjAAAAAAAAAAEAAAAM"
+    "ZW5VUwAAACAAAAAcAEcAbwBvAGcAbABlACAASQBuAGMALgAgADIAMAAxADb/2wBDAAYEBQYFBAYGBQYHBwYIChAKCgkJChQODwwQ"
+    "FxQYGBcUFhYaHSUfGhsjHBYWICwgIyYnKSopGR8tMC0oMCUoKSj/2wBDAQcHBwoIChMKChMoGhYaKCgoKCgoKCgoKCgoKCgoKCgo"
+    "KCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCj/wAARCAAEAAQDASIAAhEBAxEB/8QAFQABAQAAAAAAAAAAAAAAAAAAAAb/"
+    "xAAZEAADAQEBAAAAAAAAAAAAAAAAAQIDETH/xAAVAQEBAAAAAAAAAAAAAAAAAAAFB//EABcRAQEBAQAAAAAAAAAAAAAAAAIBABH/"
+    "2gAMAwEAAhEDEQA/AJPLOcoUQuSvEAANtNVK9t1VJgkJnJN//9k=")
+
+
+def images_pdf():
+    """Text around two images: 8-bit RGB samples with a soft mask (Flate), and a JPEG."""
+    rgb = bytes([255, 0, 0, 0, 255, 0, 0, 0, 255, 255, 255, 255])
+    alpha = bytes([255, 255, 128, 0])
+    prose = [
+        "Quarterly figures for the northern region, as reported by each branch.",
+        "Sales rose in every branch but one, and returns held steady throughout.",
+        "Staffing changed at two branches, which the notes at the end explain.",
+        "Figures are in thousands, rounded to the nearest whole unit.",
+        "Where a branch reported late, its previous quarter stands in.",
+        "Seasonal adjustment follows the method used in earlier reports.",
+        "The chart below breaks the total down by product line and month.",
+    ]
+    content = pdf_text(72, 720, 24, "Figures")
+    for n, line in enumerate(prose):
+        content += pdf_text(72, 690 - 16 * n, 12, line)
+    content += (pdf_text(72, 560, 12, "A drawn chart follows.")
+                + b"q 40 0 0 40 72 510 cm /Im1 Do Q\n"
+                + pdf_text(72, 490, 12, "A photo follows.")
+                + b"q 40 0 0 40 72 440 cm /Im2 Do Q\n"
+                + pdf_text(72, 420, 12, "End of figures."))
+    objs = {
+        1: b"<< /Type /Catalog /Pages 2 0 R >>",
+        2: b"<< /Type /Pages /Kids [3 0 R] /Count 1 >>",
+        3: (b"<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792]"
+            b" /Resources << /Font << /F1 4 0 R >> /XObject << /Im1 5 0 R /Im2 7 0 R >> >>"
+            b" /Contents 8 0 R >>"),
+        4: b"<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>",
+        5: pdf_stream(b"/Type /XObject /Subtype /Image /Width 2 /Height 2 /ColorSpace /DeviceRGB"
+                      b" /BitsPerComponent 8 /Filter /FlateDecode /SMask 6 0 R", zlib.compress(rgb)),
+        6: pdf_stream(b"/Type /XObject /Subtype /Image /Width 2 /Height 2 /ColorSpace /DeviceGray"
+                      b" /BitsPerComponent 8 /Filter /FlateDecode", zlib.compress(alpha)),
+        7: pdf_stream(b"/Type /XObject /Subtype /Image /Width 4 /Height 4 /ColorSpace /DeviceRGB"
+                      b" /BitsPerComponent 8 /Filter /DCTDecode", TINY_JPEG),
+        8: pdf_stream(b"", content),
+    }
+    (OUT / "pdf" / "handmade-images.pdf").write_bytes(pdf_file(objs))
+
+
+def ruled_table(top, rows, widths=(200, 100, 100), left=72, height=20):
+    """Text and grid lines for a bordered table whose first row sits at `top`."""
+    out = b""
+    for r, row in enumerate(rows):
+        x = left
+        for text, width in zip(row, widths):
+            out += pdf_text(x + 4, top - (r + 1) * height + 6, 11, text)
+            x += width
+    bottom = top - len(rows) * height
+    right = left + sum(widths)
+    out += b"0.5 w\n"
+    for r in range(len(rows) + 1):
+        y = top - r * height
+        out += b"%d %d m %d %d l S\n" % (left, y, right, y)
+    x = left
+    for width in (0,) + widths:
+        x += width
+        out += b"%d %d m %d %d l S\n" % (x, top, x, bottom)
+    return out
+
+
+def tables_pdf():
+    """A bordered table that breaks across two pages, its header row repeated."""
+    header = ("Item", "Quantity", "Price")
+    first = [header] + [("Widget %d" % n, str(n * 3), "%d.00" % (n * 7)) for n in range(1, 7)]
+    second = [header] + [("Widget %d" % n, str(n * 3), "%d.00" % (n * 7)) for n in range(7, 11)]
+    page1 = (pdf_text(72, 720, 24, "Inventory")
+             + pdf_text(72, 690, 12, "Stock on hand at the end of the quarter.")
+             + ruled_table(300, first))
+    page2 = (ruled_table(740, second)
+             + pdf_text(72, 620, 12, "All prices exclude tax."))
+    objs = {
+        1: b"<< /Type /Catalog /Pages 2 0 R >>",
+        2: b"<< /Type /Pages /Kids [4 0 R 6 0 R] /Count 2 >>",
+        3: b"<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>",
+        4: (b"<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792]"
+            b" /Resources << /Font << /F1 3 0 R >> >> /Contents 5 0 R >>"),
+        5: pdf_stream(b"", page1),
+        6: (b"<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792]"
+            b" /Resources << /Font << /F1 3 0 R >> >> /Contents 7 0 R >>"),
+        7: pdf_stream(b"", page2),
+    }
+    (OUT / "pdf" / "handmade-tables.pdf").write_bytes(pdf_file(objs))
+
+
 def ocr_pdfs():
     """A scan (image-only pages) and a mixed document (a text page then a scanned one)."""
     (OUT / "pdf" / "handmade-scanned.pdf").write_bytes(handmade_pdf([IMAGE_PAGE, IMAGE_PAGE]))
@@ -2292,6 +2416,8 @@ def main():
     math_docx()
     math_pptx()
     ocr_pdfs()
+    images_pdf()
+    tables_pdf()
     math_odt()
     math_epub()
     math_rtf()

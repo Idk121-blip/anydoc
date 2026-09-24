@@ -127,6 +127,55 @@ fn scanned_pages_are_reported_not_dropped() {
     }
 }
 
+/// Images drawn on a PDF page are kept as assets where they sit: raw
+/// samples re-encoded as PNG (soft mask as alpha), JPEG streams as they are.
+#[test]
+fn pdf_images_become_assets() {
+    let bytes = std::fs::read(fixture_root().join("pdf/handmade-images.pdf")).unwrap();
+    let doc = anydoc::to_document(&bytes, anydoc::Format::Pdf).unwrap();
+    let types: Vec<&str> = doc.assets.iter().map(|a| a.media_type.as_str()).collect();
+    assert_eq!(types, ["image/png", "image/jpeg"]);
+    assert!(doc.assets[0].bytes.starts_with(b"\x89PNG\r\n\x1a\n"));
+    // 2x2, 8-bit RGBA: the soft mask became the alpha channel.
+    assert_eq!(&doc.assets[0].bytes[16..26], &[0, 0, 0, 2, 0, 0, 0, 2, 8, 6]);
+    assert!(doc.assets[1].bytes.starts_with(&[0xFF, 0xD8]));
+    let images = doc
+        .blocks
+        .iter()
+        .filter(|b| {
+            matches!(b, anydoc::model::Block::Paragraph(inlines)
+            if inlines.iter().any(|i| matches!(i, anydoc::model::Inline::Image {
+                source: anydoc::model::ImageSource::Asset(_), ..
+            })))
+        })
+        .count();
+    assert_eq!(images, 2);
+}
+
+/// HTML output for a cross-section of the corpus: spans, list styles,
+/// footnotes, anchors, and inline images.
+#[test]
+fn html_corpus() {
+    let root = fixture_root();
+    for rel in [
+        "pdf/text.pdf",
+        "pdf/handmade-images.pdf",
+        "pdf/handmade-tables.pdf",
+        "docx/handmade-rich.docx",
+        "docx/handmade-numbering.docx",
+        "epub/handmade-features.epub",
+        "rtf/handmade-merge.rtf",
+        "xlsx/handmade-merged.xlsx",
+    ] {
+        let name = format!("html__{}", rel.replace('/', "__"));
+        let output = match anydoc::to_html(root.join(rel)) {
+            Ok(html) => html,
+            Err(e) => format!("ERROR: {e:#}"),
+        };
+        insta::assert_snapshot!(name, output);
+    }
+}
+
 /// Embedded object payloads land in `Document::assets` with their identity
 /// and media type (the Markdown output shows only the alt text).
 #[test]

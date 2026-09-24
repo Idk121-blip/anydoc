@@ -11,6 +11,7 @@ npm install @firecrawl/anydoc-wasm
 ```js
 import init, {
   formatFromBytes,
+  toHtmlBytes,
   toMarkdownBytes,
   toDocument,
 } from '@firecrawl/anydoc-wasm';
@@ -25,6 +26,9 @@ const fromCsv = toMarkdownBytes(bytes, 'csv');
 
 // Or stop at the document model, which also carries embedded assets:
 const document = toDocument(bytes);
+
+// Or a standalone HTML page: merged cells kept, images inline:
+const html = toHtmlBytes(bytes);
 
 // Format detection on its own:
 formatFromBytes(bytes); // 'docx', or undefined when nothing matches

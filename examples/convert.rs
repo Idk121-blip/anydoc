@@ -1,12 +1,12 @@
-//! Convert a document to Markdown:
-//! `cargo run --example convert -- <file> [-f csv] [-o out.md] [--assets dir]`
+//! Convert a document to Markdown, or HTML with `--html`:
+//! `cargo run --example convert -- <file> [-f csv] [--html] [-o out.md] [--assets dir]`
 
 use std::path::{Path, PathBuf};
 use std::process::ExitCode;
 
 use anydoc::{ConvertError, Format};
 
-const USAGE: &str = "usage: convert <file> [-f csv] [-o out.md] [--assets dir]";
+const USAGE: &str = "usage: convert <file> [-f csv] [--html] [-o out.md] [--assets dir]";
 
 fn main() -> ExitCode {
     let args: Vec<String> = std::env::args().skip(1).collect();
@@ -14,6 +14,7 @@ fn main() -> ExitCode {
     let mut output: Option<PathBuf> = None;
     let mut format: Option<Format> = None;
     let mut assets: Option<PathBuf> = None;
+    let mut html = false;
     let mut i = 0;
     while i < args.len() {
         match args[i].as_str() {
@@ -30,6 +31,7 @@ fn main() -> ExitCode {
                 };
                 format = Some(named);
             }
+            "--html" => html = true,
             "--assets" => {
                 i += 1;
                 assets = args.get(i).map(PathBuf::from);
@@ -43,7 +45,7 @@ fn main() -> ExitCode {
         return ExitCode::FAILURE;
     };
 
-    match run(&input, output.as_deref(), format, assets.as_deref()) {
+    match run(&input, output.as_deref(), format, assets.as_deref(), html) {
         Ok(()) => ExitCode::SUCCESS,
         Err(e) => {
             eprintln!("error: {e:#}");
@@ -57,6 +59,7 @@ fn run(
     output: Option<&Path>,
     format: Option<Format>,
     assets: Option<&Path>,
+    html: bool,
 ) -> Result<(), ConvertError> {
     let bytes = std::fs::read(input)?;
     // Without -f the format comes from the file content, with the extension as
@@ -73,31 +76,37 @@ fn run(
         };
 
     let start = std::time::Instant::now();
-    let markdown = anydoc::to_markdown_bytes(&bytes, format)?;
+    let document = anydoc::to_document(&bytes, format)?;
+    let stem = input.file_stem().unwrap_or_default().to_string_lossy();
+    let text = if html {
+        // With --assets the page links the files written below; without, it
+        // carries the images inline.
+        let mut options = anydoc::HtmlOptions::default();
+        if assets.is_some() {
+            options.asset_prefix = Some(format!("{stem}-"));
+        }
+        anydoc::document_to_html(&document, &options)
+    } else {
+        anydoc::document_to_markdown(&document)
+    };
     let elapsed = start.elapsed().as_secs_f64() * 1000.0;
     eprintln!("converted {} in {}", input.display(), millis(elapsed));
 
     match output {
-        Some(out) => std::fs::write(out, markdown)?,
+        Some(out) => std::fs::write(out, text)?,
         None => {
             use std::io::Write;
-            let _ = std::io::stdout().write_all(markdown.as_bytes());
+            let _ = std::io::stdout().write_all(text.as_bytes());
         }
     }
 
-    // Images and embedded objects live on the document model, not in the
-    // Markdown, so they need a second pass to write out.
+    // Images and embedded objects live on the document model; Markdown shows
+    // only their alt text.
     if let Some(dir) = assets {
-        let document = anydoc::to_document(&bytes, format)?;
         std::fs::create_dir_all(dir)?;
-        let stem = input.file_stem().unwrap_or_default().to_string_lossy();
         for asset in &document.assets {
-            let (kind, subtype) = asset.media_type.split_once('/').unwrap_or(("", ""));
-            let extension = match kind {
-                "image" => subtype.chars().filter(char::is_ascii_alphanumeric).collect(),
-                _ => "bin".to_string(),
-            };
-            std::fs::write(dir.join(format!("{stem}-{}.{extension}", asset.id.0)), &asset.bytes)?;
+            let name = format!("{stem}-{}.{}", asset.id.0, asset.extension());
+            std::fs::write(dir.join(name), &asset.bytes)?;
         }
         eprintln!("wrote {} assets to {}", document.assets.len(), dir.display());
     }

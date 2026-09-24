@@ -1,0 +1,54 @@
+---
+source: tests/snapshots.rs
+expression: output
+---
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Fixture Document</title>
+<style>
+body { font-family: system-ui, sans-serif; line-height: 1.5; max-width: 50rem; margin: 2rem auto; padding: 0 1rem; }
+table { border-collapse: collapse; margin: 1rem 0; }
+th, td { border: 1px solid #999; padding: 0.25rem 0.5rem; vertical-align: top; }
+table.layout, table.layout td { border: none; }
+img { max-width: 100%; }
+pre { overflow-x: auto; }
+</style>
+</head>
+<body>
+<h1 id="fixture-document">Fixture Document</h1>
+<p>Plain paragraph with <strong>bold</strong>, <em>italic</em>, and <s>struck</s> runs. <strong>Style-bold paragraph with a</strong> NotBold-styled span <strong>inside.</strong></p>
+<h2 id="lists">Lists</h2>
+<p>1.First numbered<br>
+2.Second numbered<br>
+a)Alpha sub one<br>
+b)Alpha sub two<br>
+i.Roman sub sub<br>
+3.Third numbered Interrupting paragraph between lists.<br>
+4.Fourth, continuing the count IV.Roman starting at four<br>
+V.Roman five •Bullet one •Bullet two ◦Nested bullet</p>
+<h2 id="table">Table</h2>
+<table>
+<tbody>
+<tr><td colspan="2">Wide head</td><td>End</td></tr>
+<tr><td rowspan="2">Tall</td><td>B2</td><td>C2</td></tr>
+<tr><td>B3</td><td>C3</td></tr>
+</tbody>
+</table>
+<h2 id="notes-and-special-text">Notes and special text</h2>
+<p>Music clef 𝄞 appears before this footnote¹ reference. i An endnote follows here. Persian with ZWNJ: مهاوخیم. Family emoji: 👨👩👧. Markdown specials: <em>stars</em> <em>under</em> [bracket] <code>tick</code> #hash 1. dotted | pipe.</p>
+<h2 id="links-and-anchors">Links and anchors</h2>
+<p>External link to example. Relative link to a sibling file. This plain paragraph carries a bookmark. Jump to the bookmarked paragraph.</p>
+<h2 id="objects">Objects</h2>
+<p><img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADklEQVR4AQKM4T8DQz0ABIABf8eeivMAAAAASUVORK5CYII=" alt=""></p>
+<p>Inline image: done.</p>
+<h3 id="inside-the-text-box">Inside the text box.</h3>
+<p>Text box: after the box.</p>
+<h2 id="quote-and-code">Quote and code</h2>
+<p>Value below one millionth: 0.0000004 should survive.</p>
+<p>1 Footnote after an astral character.</p>
+<p>i Endnote body text.</p>
+</body>
+</html>

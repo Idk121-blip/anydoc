@@ -12,6 +12,9 @@ use std::collections::{HashMap, HashSet};
 
 pub(crate) struct AnchorMap {
     resolved: HashMap<String, Resolved>,
+    /// Each heading block's own slug, keyed by the block's address: HTML
+    /// has no automatic heading ids, so its writer sets them from here.
+    heading_slugs: HashMap<usize, String>,
 }
 
 struct Resolved {
@@ -32,11 +35,17 @@ impl AnchorMap {
     pub(crate) fn html_id(&self, id: &str) -> Option<&str> {
         self.resolved.get(id).filter(|r| r.emit_html).map(|r| r.fragment.as_str())
     }
+
+    /// The slug `heading` (a block of the resolved document) claimed.
+    pub(crate) fn heading_slug(&self, heading: &Block) -> Option<&str> {
+        self.heading_slugs.get(&(heading as *const Block as usize)).map(String::as_str)
+    }
 }
 
 pub(crate) fn resolve_anchors(doc: &Document) -> AnchorMap {
     let mut ids = UniqueIds::default();
     let mut resolved: HashMap<String, Resolved> = HashMap::new();
+    let mut heading_slugs: HashMap<usize, String> = HashMap::new();
 
     // Anchor ids some link in the document targets, notes included.
     let mut linked: HashSet<&str> = HashSet::new();
@@ -53,6 +62,7 @@ pub(crate) fn resolve_anchors(doc: &Document) -> AnchorMap {
             let Some(slug) = ids.claim(gfm_slug(&inlines_to_plain_text(content))) else {
                 return;
             };
+            heading_slugs.insert(block as *const Block as usize, slug.clone());
             let mut bind = |id: &str| {
                 resolved
                     .entry(id.to_string())
@@ -79,7 +89,7 @@ pub(crate) fn resolve_anchors(doc: &Document) -> AnchorMap {
         walk_blocks(&note.blocks, &mut |block| bind_block_anchors(block, &mut assign));
     }
 
-    AnchorMap { resolved }
+    AnchorMap { resolved, heading_slugs }
 }
 
 fn collect_link_targets<'a>(block: &'a Block, out: &mut HashSet<&'a str>) {

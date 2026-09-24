@@ -14,6 +14,8 @@ import {
   formatFromExtension,
   formatFromPath,
   toDocument,
+  toHtml,
+  toHtmlBytes,
   toMarkdown,
   toMarkdownBytes,
 } from './anydoc.js'
@@ -25,6 +27,8 @@ const RICH = fixture('docx/handmade-rich.docx')
 const CSV = fixture('csv/sheet.csv')
 const ENCRYPTED = fixture('malformed/encrypted--errors.odt')
 const MIXED = fixture('pdf/handmade-mixed.pdf')
+const PDF_IMAGES = fixture('pdf/handmade-images.pdf')
+const PDF_TAGGED = fixture('pdf/text.pdf')
 
 test('toMarkdown detects the format from the file content', async () => {
   const markdown = await toMarkdown(OUTLINE)
@@ -59,6 +63,24 @@ test('toDocument carries embedded assets as buffers', async () => {
   assert.ok(Buffer.isBuffer(image.data))
   assert.ok(image.data.length > 0)
   assert.equal(image.id, document.assets.indexOf(image))
+})
+
+test('toDocument reads PDFs, images included', async () => {
+  const document = await toDocument(await readFile(PDF_IMAGES))
+  assert.deepEqual(
+    document.assets.map((asset) => asset.mediaType),
+    ['image/png', 'image/jpeg'],
+  )
+})
+
+test('toHtml keeps merged cells and inlines images', async () => {
+  const html = await toHtml(PDF_TAGGED)
+  assert.match(html, /^<!DOCTYPE html>/)
+  assert.match(html, /<td colspan="2">Wide head<\/td>/)
+  assert.match(html, /<td rowspan="2">Tall<\/td>/)
+  const images = await toHtmlBytes(await readFile(PDF_IMAGES), 'pdf')
+  assert.match(images, /<img src="data:image\/jpeg;base64,/)
+  await assert.rejects(toHtmlBytes(await readFile(CSV)), (error) => error.code === 'unsupported')
 })
 
 test('format detection reads content, extension, and path', async () => {
@@ -178,6 +200,13 @@ test('cli writes to --output instead of stdout', async () => {
   }
 })
 
+test('cli --to html writes an HTML page', async () => {
+  const { code, stdout } = await runCli([RICH, '--to', 'html'])
+  assert.equal(code, undefined)
+  assert.match(stdout, /^<!DOCTYPE html>/)
+  assert.match(stdout, /<table>/)
+})
+
 test('cli reads stdin with an explicit format', async () => {
   const child = promisify(execFile)(process.execPath, [CLI, '-', '--format', 'csv'])
   child.child.stdin.end(await readFile(CSV))
@@ -206,7 +235,7 @@ test('cli --ocr hosted converts a pdf with scanned pages through Firecrawl Parse
 })
 
 test('cli exits 2 on usage errors', async () => {
-  for (const args of [[], ['--frmat', 'csv', CSV], ['--format', 'nope', CSV], [OUTLINE, RICH], ['--ocr', 'cloud', MIXED]]) {
+  for (const args of [[], ['--frmat', 'csv', CSV], ['--format', 'nope', CSV], [OUTLINE, RICH], ['--ocr', 'cloud', MIXED], ['--to', 'pdf', OUTLINE], ['--to', 'html', '--ocr', 'hosted', MIXED]]) {
     const { code, stderr } = await runCli(args)
     assert.equal(code, 2)
     assert.match(stderr, /^anydoc: /)
