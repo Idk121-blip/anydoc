@@ -1,0 +1,39 @@
+---
+source: tests/snapshots.rs
+expression: output
+---
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Document</title>
+<style>
+body { font-family: system-ui, sans-serif; line-height: 1.5; max-width: 50rem; margin: 2rem auto; padding: 0 1rem; }
+table { border-collapse: collapse; margin: 1rem 0; }
+th, td { border: 1px solid #999; padding: 0.25rem 0.5rem; vertical-align: top; }
+table.layout, table.layout td { border: none; }
+img { max-width: 100%; }
+pre { overflow-x: auto; }
+</style>
+</head>
+<body>
+<p>Nel corso dell&#39;anno sono pervenute oltre novantottomila segnalazioni di operazioni sospette, in aumento rispetto all&#39;anno precedente; la crescita riguarda soprattutto gli operatori di gioco e gli intermediari finanziari diversi dalle banche, mentre le segnalazioni di matrice bancaria restano sostanzialmente stabili nel periodo.</p>
+<p><em>Tavola 1.2</em></p>
+<p><strong>Segnalazioni ricevute per tipologia di segnalante</strong></p>
+<table>
+<thead>
+<tr><th rowspan="2">TIPOLOGIA DI SEGNALANTE</th><th colspan="2"><strong>2017</strong></th><th colspan="3"><strong>2018</strong></th></tr>
+<tr><th><em>(valori assoluti)</em></th><th><em>(quote %)</em></th><th><em>(valori assoluti)</em></th><th><em>(quote %)</em></th><th><em>(var. % rispetto al 2017)</em></th></tr>
+</thead>
+<tbody>
+<tr><td><strong>Totale</strong></td><td><strong>93.820</strong></td><td><strong>100,0</strong></td><td><strong>98.030</strong></td><td><strong>100,0</strong></td><td><strong>4,5</strong></td></tr>
+<tr><td>Banche e Poste</td><td>72.171</td><td>76,9</td><td>71.054</td><td>72,5</td><td>-1,5</td></tr>
+<tr><td>Societa&#39; di gestione dei mer- cati e strumenti finanziari</td><td>5</td><td>0,0</td><td>11</td><td>0,0</td><td>120,0</td></tr>
+<tr><td>Professionisti</td><td>4.969</td><td>5,3</td><td>4.818</td><td>4,9</td><td>-3,0</td></tr>
+</tbody>
+</table>
+<p>(1) Dati provvisori per l&#39;ultimo anno.</p>
+<p>Nel corso dell&#39;anno sono pervenute oltre novantottomila segnalazioni di operazioni sospette, in aumento rispetto all&#39;anno precedente; la crescita riguarda soprattutto</p>
+</body>
+</html>

@@ -152,6 +152,60 @@ fn pdf_images_become_assets() {
     assert_eq!(images, 2);
 }
 
+fn pdf_tables(name: &str) -> Vec<anydoc::model::Table> {
+    let bytes = std::fs::read(fixture_root().join("pdf").join(name)).unwrap();
+    let doc = anydoc::to_document(&bytes, anydoc::Format::Pdf).unwrap();
+    doc.blocks
+        .into_iter()
+        .filter_map(|b| match b {
+            anydoc::model::Block::Table(t) => Some(t),
+            _ => None,
+        })
+        .collect()
+}
+
+fn spans(table: &anydoc::model::Table, row: usize) -> Vec<(u32, u32)> {
+    table.grid[row]
+        .iter()
+        .filter_map(|slot| match slot {
+            anydoc::model::CellSlot::Origin(cell) => Some((cell.col_span, cell.row_span)),
+            anydoc::model::CellSlot::Covered { .. } => None,
+        })
+        .collect()
+}
+
+/// A table ruled only horizontally keeps its grouped header: the stub head
+/// spans both tiers, each year spans its own columns.
+#[test]
+fn pdf_grouped_header_keeps_its_spans() {
+    let tables = pdf_tables("handmade-grouped.pdf");
+    assert_eq!(tables.len(), 1);
+    let table = &tables[0];
+    assert_eq!(table.header_rows, 2);
+    assert_eq!(spans(table, 0), vec![(1, 2), (2, 1), (3, 1)]);
+    assert_eq!(table.grid.iter().map(Vec::len).max(), Some(6));
+    // The wrapped label and its values share one row.
+    assert_eq!(table.grid.len(), 2 + 4);
+}
+
+/// Two columns split by a vertical rule become one two-column table, its
+/// continuation on the next page included.
+#[test]
+fn pdf_split_columns_become_one_table() {
+    let tables = pdf_tables("handmade-split.pdf");
+    assert_eq!(tables.len(), 1);
+    assert_eq!(tables[0].header_rows, 1);
+    assert!(tables[0].grid.iter().all(|row| row.len() == 2));
+    // Section titles span both columns.
+    assert_eq!(spans(&tables[0], 1), vec![(2, 1)]);
+}
+
+/// A chart's labels are a figure's text, never a table.
+#[test]
+fn pdf_chart_labels_are_not_a_table() {
+    assert!(pdf_tables("handmade-chart.pdf").is_empty());
+}
+
 /// HTML output for a cross-section of the corpus: spans, list styles,
 /// footnotes, anchors, and inline images.
 #[test]
@@ -161,6 +215,8 @@ fn html_corpus() {
         "pdf/text.pdf",
         "pdf/handmade-images.pdf",
         "pdf/handmade-tables.pdf",
+        "pdf/handmade-grouped.pdf",
+        "pdf/handmade-split.pdf",
         "docx/handmade-rich.docx",
         "docx/handmade-numbering.docx",
         "epub/handmade-features.epub",

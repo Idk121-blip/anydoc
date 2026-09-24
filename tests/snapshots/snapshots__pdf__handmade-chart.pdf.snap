@@ -1,0 +1,32 @@
+---
+source: tests/snapshots.rs
+expression: output
+---
+Nel corso dell'anno sono pervenute oltre novantottomila segnalazioni di operazioni sospette, in aumento rispetto all'anno precedente; la crescita riguarda soprattutto
+
+# gli operatori di gioco e gli intermediari finanziari diversi dalle banche, mentre
+
+# le segnalazioni di matrice bancaria restano sostanzialmente stabili nel periodo.
+
+Figura 1.5\
+Tempi di inoltro delle segnalazioni\
+100,0\
+100\
+80 77,7\
+68,6\
+60\
+50,4\
+40\
+30,4\
+22,3\
+20,0\
+18,2\
+20 16,4\
+14,0 14,0\
+9,1\
+0\
+<=7gg 7\<gg<=15 15\<gg<=30 30\<gg<=60 60\<gg<=90 >90gg
+
+## valori per classe temporale valori cumulati
+
+Nel corso dell'anno sono pervenute oltre novantottomila segnalazioni di operazioni sospette, in aumento rispetto all'anno precedente; la crescita riguarda soprattutto
