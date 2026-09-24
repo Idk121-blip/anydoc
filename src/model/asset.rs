@@ -16,3 +16,25 @@ pub struct Asset {
     /// The payload, exactly as stored in the source.
     pub bytes: Vec<u8>,
 }
+
+impl Asset {
+    /// A file extension for [`Asset::media_type`], without the dot: `png`,
+    /// `jpg`, `svg`, ... and `bin` for types without a common one.
+    pub fn extension(&self) -> &'static str {
+        match self.media_type.as_str() {
+            "image/png" => "png",
+            "image/jpeg" => "jpg",
+            "image/gif" => "gif",
+            "image/bmp" => "bmp",
+            "image/tiff" => "tif",
+            "image/svg+xml" => "svg",
+            "image/webp" => "webp",
+            "image/avif" => "avif",
+            "image/jp2" => "jp2",
+            "image/emf" | "image/x-emf" => "emf",
+            "image/wmf" | "image/x-wmf" => "wmf",
+            "application/pdf" => "pdf",
+            _ => "bin",
+        }
+    }
+}

@@ -11,6 +11,7 @@ import {
   formatFromExtension,
   formatFromPath,
   toDocument,
+  toHtmlBytes,
   toMarkdownBytes,
 } from './pkg/anydoc_wasm.js'
 
@@ -37,9 +38,12 @@ test('toMarkdownBytes detects the format when none is named', () => {
   assert.match(toMarkdownBytes(CSV, 'csv'), /\| --- \|/)
 })
 
-test('pdf converts to Markdown but has no document model', () => {
+test('pdf converts to Markdown, HTML and the document model', () => {
   assert.ok(toMarkdownBytes(PDF).length > 0)
-  assert.throws(() => toDocument(PDF), /pdf/i)
+  assert.ok(toDocument(PDF).assets.some((asset) => asset.mediaType === 'image/png'))
+  const html = toHtmlBytes(PDF)
+  assert.match(html, /^<!DOCTYPE html>/)
+  assert.match(html, /<td colspan="2">Wide head<\/td>/)
 })
 
 test('toDocument exposes the document model', () => {

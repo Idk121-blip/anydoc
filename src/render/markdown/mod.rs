@@ -1,6 +1,6 @@
 //! GitHub-Flavored Markdown serializer for the document model.
 
-mod anchors;
+pub(crate) mod anchors;
 mod escape;
 mod inline;
 mod table;
@@ -29,7 +29,7 @@ pub(crate) fn escape_marker_label(label: &str, ctx: InlineContext) -> String {
 }
 
 /// Footnote id -> rendered number, shared by all render functions.
-type NoteNumbers = HashMap<String, usize>;
+pub(crate) type NoteNumbers = HashMap<String, usize>;
 
 /// Immutable render context threaded through every render function.
 pub(crate) struct Ctx {
@@ -75,7 +75,7 @@ pub fn document_to_markdown(doc: &Document) -> String {
 
 /// Number notes in first-reference order; unreferenced notes follow at the
 /// end. The first note wins a duplicated id.
-fn number_notes(doc: &Document) -> NoteNumbers {
+pub(crate) fn number_notes(doc: &Document) -> NoteNumbers {
     let mut valid: HashMap<&str, &Note> = HashMap::new();
     for note in &doc.notes {
         if !note.blocks.iter().all(block_is_blank) {

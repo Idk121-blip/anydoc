@@ -17,10 +17,11 @@ pub enum Format {
     doc,
     docx,
     odt,
-    /// Converted with pdf-inspector, which emits Markdown directly:
-    /// `toDocument` is unsupported for PDFs. Scanned or image-only pages
-    /// need OCR, which anydoc does not do: the document rejects with
-    /// `needsOcr` naming them.
+    /// Text-based PDFs, read with pdf-inspector. Embedded images become
+    /// assets, and a tagged PDF's own table structure replaces what layout
+    /// analysis made of its tables. Scanned or image-only pages need OCR,
+    /// which anydoc does not do: the document rejects with `needsOcr` naming
+    /// them.
     pdf,
     ppt,
     pptx,
@@ -99,7 +100,7 @@ pub fn format_from_path(path: String) -> Option<Format> {
 /// that cannot be read is `'io'`.
 #[napi(ts_return_type = "Promise<string>")]
 pub fn to_markdown(path: String) -> AsyncTask<MarkdownFileTask> {
-    AsyncTask::new(MarkdownFileTask { path, failure: Failure::default() })
+    AsyncTask::new(MarkdownFileTask { path, html: false, failure: Failure::default() })
 }
 
 /// Convert an in-memory document to Markdown. Without a format, it is
@@ -115,15 +116,39 @@ pub fn to_markdown_bytes(
     AsyncTask::new(MarkdownBytesTask {
         bytes: bytes.to_vec(),
         format: format.map(Into::into),
+        html: false,
+        failure: Failure::default(),
+    })
+}
+
+/// Convert a document file to a standalone HTML page, embedded images
+/// included as `data:` URIs. The format is detected as for `toMarkdown`.
+/// HTML keeps what Markdown cannot: merged table cells, list numbering
+/// styles, and the images themselves.
+///
+/// Rejects with an `Error` carrying a `ConvertErrorCode` on `code`; a file
+/// that cannot be read is `'io'`.
+#[napi(ts_return_type = "Promise<string>")]
+pub fn to_html(path: String) -> AsyncTask<MarkdownFileTask> {
+    AsyncTask::new(MarkdownFileTask { path, html: true, failure: Failure::default() })
+}
+
+/// Convert an in-memory document to a standalone HTML page. The format is
+/// as for `toMarkdownBytes`.
+///
+/// Rejects with an `Error` carrying a `ConvertErrorCode` on `code`.
+#[napi(ts_return_type = "Promise<string>")]
+pub fn to_html_bytes(bytes: Uint8Array, format: Option<Format>) -> AsyncTask<MarkdownBytesTask> {
+    AsyncTask::new(MarkdownBytesTask {
+        bytes: bytes.to_vec(),
+        format: format.map(Into::into),
+        html: true,
         failure: Failure::default(),
     })
 }
 
 /// Parse an in-memory document into the document model, which also carries
 /// the embedded assets. Without a format, it is detected from the content.
-///
-/// Unsupported for `pdf`: PDF conversion produces Markdown directly and has
-/// no document-model form; use `toMarkdownBytes`.
 ///
 /// Rejects with an `Error` carrying a `ConvertErrorCode` on `code`.
 #[napi(ts_return_type = "Promise<Document>")]
@@ -180,8 +205,10 @@ impl Failure {
     }
 }
 
+/// Converts a file to Markdown, or to HTML when `html` is set.
 pub struct MarkdownFileTask {
     path: String,
+    html: bool,
     failure: Failure,
 }
 
@@ -190,7 +217,9 @@ impl Task for MarkdownFileTask {
     type JsValue = String;
 
     fn compute(&mut self) -> Result<Self::Output> {
-        anydoc::to_markdown(&self.path).map_err(|e| self.failure.capture(e))
+        let converted =
+            if self.html { anydoc::to_html(&self.path) } else { anydoc::to_markdown(&self.path) };
+        converted.map_err(|e| self.failure.capture(e))
     }
 
     fn resolve(&mut self, _env: Env, output: Self::Output) -> Result<Self::JsValue> {
@@ -202,9 +231,11 @@ impl Task for MarkdownFileTask {
     }
 }
 
+/// Converts bytes to Markdown, or to HTML when `html` is set.
 pub struct MarkdownBytesTask {
     bytes: Vec<u8>,
     format: Option<anydoc::Format>,
+    html: bool,
     failure: Failure,
 }
 
@@ -213,7 +244,12 @@ impl Task for MarkdownBytesTask {
     type JsValue = String;
 
     fn compute(&mut self) -> Result<Self::Output> {
-        anydoc::to_markdown_bytes(&self.bytes, self.format).map_err(|e| self.failure.capture(e))
+        let converted = if self.html {
+            anydoc::to_html_bytes(&self.bytes, self.format)
+        } else {
+            anydoc::to_markdown_bytes(&self.bytes, self.format)
+        };
+        converted.map_err(|e| self.failure.capture(e))
     }
 
     fn resolve(&mut self, _env: Env, output: Self::Output) -> Result<Self::JsValue> {

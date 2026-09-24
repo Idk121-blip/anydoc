@@ -1,0 +1,13 @@
+---
+source: tests/snapshots.rs
+expression: output
+---
+# Figures
+
+Quarterly figures for the northern region, as reported by each branch. Sales rose in every branch but one, and returns held steady throughout. Staffing changed at two branches, which the notes at the end explain. Figures are in thousands, rounded to the nearest whole unit. Where a branch reported late, its previous quarter stands in. Seasonal adjustment follows the method used in earlier reports. The chart below breaks the total down by product line and month.
+
+A drawn chart follows.
+
+A photo follows.
+
+End of figures.

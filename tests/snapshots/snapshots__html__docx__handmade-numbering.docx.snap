@@ -1,0 +1,73 @@
+---
+source: tests/snapshots.rs
+expression: output
+---
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Inherited subheading</title>
+<style>
+body { font-family: system-ui, sans-serif; line-height: 1.5; max-width: 50rem; margin: 2rem auto; padding: 0 1rem; }
+table { border-collapse: collapse; margin: 1rem 0; }
+th, td { border: 1px solid #999; padding: 0.25rem 0.5rem; vertical-align: top; }
+table.layout, table.layout td { border: none; }
+img { max-width: 100%; }
+pre { overflow-x: auto; }
+</style>
+</head>
+<body>
+<ol>
+<li>One-one</li>
+<li>
+<p>One-two</p>
+<ol type="i">
+<li style="list-style-type: none">i) One-two-a roman</li>
+<li style="list-style-type: none">ii) 
+<p>One-two-b roman</p>
+<ul>
+<li>Deep bullet</li>
+</ul>
+</li>
+</ol>
+</li>
+<li>One-three</li>
+</ol>
+<p>Interruption paragraph.</p>
+<ol start="4">
+<li>One-four continues the count</li>
+</ol>
+<ol>
+<li>Two-one independent counter</li>
+</ol>
+<ol start="10">
+<li>Ten-start via override</li>
+</ol>
+<ol type="A">
+<li style="list-style-type: none">A: Letter-A via numStyleLink</li>
+</ol>
+<ol type="A" start="7">
+<li style="list-style-type: none">G) Level replaced and start overridden together</li>
+</ol>
+<p>Suppressed numbering paragraph</p>
+<ol start="5">
+<li>Style-numbered paragraph</li>
+</ol>
+<ol>
+<li>
+<p>pStyle-bound level one</p>
+<ol type="a">
+<li>pStyle-bound level two</li>
+</ol>
+</li>
+<li>pStyle-bound level one again</li>
+</ol>
+<h2 id="inherited-subheading">Inherited subheading</h2>
+<p><strong>Bold here, and style-false keeps it bold</strong></p>
+<p>toggled off by a true in the character style</p>
+<p>double toggle cancels to plain</p>
+<p>direct off wins absolutely</p>
+<p><em>direct on makes this italic</em></p>
+</body>
+</html>

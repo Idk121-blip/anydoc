@@ -99,5 +99,7 @@ module.exports.MarkerKind = native.MarkerKind
 module.exports.NoteKind = native.NoteKind
 module.exports.TableKind = native.TableKind
 module.exports.toDocument = native.toDocument
+module.exports.toHtml = native.toHtml
+module.exports.toHtmlBytes = native.toHtmlBytes
 module.exports.toMarkdown = toMarkdown
 module.exports.toMarkdownBytes = toMarkdownBytes

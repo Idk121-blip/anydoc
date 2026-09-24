@@ -19,10 +19,10 @@ pub enum Format {
     Doc = "doc",
     Docx = "docx",
     Odt = "odt",
-    /// Converted with pdf-inspector, which emits Markdown directly:
-    /// `toDocument` is unsupported for PDFs. Scanned or image-only pages
-    /// need OCR, which anydoc does not do: the document throws `needsOcr`
-    /// naming them.
+    /// Text-based PDFs, read with pdf-inspector. Embedded images become
+    /// assets, and a tagged PDF's own table structure replaces what layout
+    /// analysis made of its tables. Scanned or image-only pages need OCR,
+    /// which anydoc does not do: the document throws `needsOcr` naming them.
     Pdf = "pdf",
     Ppt = "ppt",
     Pptx = "pptx",
@@ -104,11 +104,19 @@ pub fn to_markdown_bytes(bytes: &[u8], format: Option<Format>) -> Result<String,
     anydoc::to_markdown_bytes(bytes, format.map(anydoc::Format::from)).map_err(convert_error)
 }
 
+/// Convert an in-memory document to a standalone HTML page, embedded images
+/// included as `data:` URIs. The format is as for `toMarkdownBytes`. HTML
+/// keeps what Markdown cannot: merged table cells, list numbering styles,
+/// and the images themselves.
+///
+/// Throws an `Error` carrying a `ConvertErrorCode` on `code`.
+#[wasm_bindgen(js_name = toHtmlBytes)]
+pub fn to_html_bytes(bytes: &[u8], format: Option<Format>) -> Result<String, JsValue> {
+    anydoc::to_html_bytes(bytes, format.map(anydoc::Format::from)).map_err(convert_error)
+}
+
 /// Parse an in-memory document into the document model, which also carries
 /// the embedded assets. Without a format, it is detected from the content.
-///
-/// Unsupported for `pdf`: PDF conversion produces Markdown directly and has
-/// no document-model form; use `toMarkdownBytes`.
 ///
 /// Throws an `Error` carrying a `ConvertErrorCode` on `code`.
 #[wasm_bindgen(js_name = toDocument, unchecked_return_type = "Document")]

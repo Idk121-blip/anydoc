@@ -1,0 +1,41 @@
+---
+source: tests/snapshots.rs
+expression: output
+---
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Document</title>
+<style>
+body { font-family: system-ui, sans-serif; line-height: 1.5; max-width: 50rem; margin: 2rem auto; padding: 0 1rem; }
+table { border-collapse: collapse; margin: 1rem 0; }
+th, td { border: 1px solid #999; padding: 0.25rem 0.5rem; vertical-align: top; }
+table.layout, table.layout td { border: none; }
+img { max-width: 100%; }
+pre { overflow-x: auto; }
+</style>
+</head>
+<body>
+<p>Rich objects follow.</p>
+<p><strong>Quarterly Widgets</strong></p>
+<table>
+<thead>
+<tr><th>Quarter</th><th>Widgets</th></tr>
+</thead>
+<tbody>
+<tr><td>Q1</td><td>10</td></tr>
+<tr><td>Q2</td><td>14</td></tr>
+</tbody>
+</table>
+<ul>
+<li>Plan</li>
+<li>Build</li>
+<li>Ship</li>
+</ul>
+<p><img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==" alt="tiny dot image"></p>
+<p>Embedded object: Excel.Sheet.12</p>
+<p>After the objects.</p>
+</body>
+</html>

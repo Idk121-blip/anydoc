@@ -1,4 +1,4 @@
-//! anydoc converts documents to GitHub-Flavored Markdown.
+//! anydoc converts documents to GitHub-Flavored Markdown or HTML.
 //!
 //! Recovery and skipped-content events are reported through the [`log`]
 //! facade (debug/warn level); logging never changes conversion behavior and
@@ -15,8 +15,7 @@ mod render;
 mod shared;
 
 pub use error::ConvertError;
-
-use render::markdown::document_to_markdown;
+pub use render::html::HtmlOptions;
 
 use std::path::Path;
 
@@ -31,10 +30,11 @@ pub enum Format {
     Docx,
     /// OpenDocument Text (`.odt`).
     Odt,
-    /// Converted with [pdf-inspector], which emits Markdown directly:
-    /// [`to_document`] is unsupported for PDFs. Scanned or image-only pages
-    /// need OCR, which anydoc does not do: the document errors with
-    /// [`ConvertError::NeedsOcr`] naming them.
+    /// Text-based PDFs, read with [pdf-inspector]. Embedded images become
+    /// assets, and a tagged PDF's own table structure (merged cells
+    /// included) replaces what layout analysis made of its tables. Scanned
+    /// or image-only pages need OCR, which anydoc does not do: the document
+    /// errors with [`ConvertError::NeedsOcr`] naming them.
     ///
     /// [pdf-inspector]: https://github.com/firecrawl/pdf-inspector
     Pdf,
@@ -110,6 +110,45 @@ pub fn to_markdown(path: impl AsRef<Path>) -> Result<String, ConvertError> {
     to_markdown_bytes(&bytes, format)
 }
 
+/// Convert a document file to a standalone HTML page, embedded images
+/// included as `data:` URIs. The format is detected as for [`to_markdown`].
+///
+/// HTML keeps what Markdown cannot: merged table cells, list numbering
+/// styles, and the images themselves.
+pub fn to_html(path: impl AsRef<Path>) -> Result<String, ConvertError> {
+    let path = path.as_ref();
+    let bytes = std::fs::read(path)?;
+    let Some(format) = Format::from_bytes(&bytes).or_else(|| Format::from_path(path)) else {
+        return Err(ConvertError::Unsupported(format!(
+            "unrecognized file content and extension: {}",
+            path.display()
+        )));
+    };
+    to_html_bytes(&bytes, format)
+}
+
+/// Convert an in-memory document to a standalone HTML page. `format` as for
+/// [`to_markdown_bytes`].
+pub fn to_html_bytes(
+    bytes: &[u8],
+    format: impl Into<Option<Format>>,
+) -> Result<String, ConvertError> {
+    Ok(document_to_html(&to_document(bytes, format)?, &HtmlOptions::default()))
+}
+
+/// Render a parsed document as GitHub-Flavored Markdown, as
+/// [`to_markdown_bytes`] does. Embedded images render as their alt text; their
+/// bytes stay in [`model::Document::assets`].
+pub fn document_to_markdown(document: &model::Document) -> String {
+    render::markdown::document_to_markdown(document)
+}
+
+/// Render a parsed document as HTML: a standalone page, or with
+/// [`HtmlOptions::fragment`] just the body content.
+pub fn document_to_html(document: &model::Document, options: &HtmlOptions) -> String {
+    render::html::document_to_html(document, options)
+}
+
 /// Convert an in-memory document to Markdown. Pass a [`Format`] to select the
 /// parser, or `None` to detect it from the content ([`Format::from_bytes`]),
 /// which signature-less formats (CSV) have to name explicitly.
@@ -117,20 +156,11 @@ pub fn to_markdown_bytes(
     bytes: &[u8],
     format: impl Into<Option<Format>>,
 ) -> Result<String, ConvertError> {
-    let format = resolve_format(bytes, format.into())?;
-    // PDFs convert to Markdown directly (pdf-inspector) without passing
-    // through the document model.
-    if format == Format::Pdf {
-        return formats::pdf::to_markdown(bytes);
-    }
     Ok(document_to_markdown(&to_document(bytes, format)?))
 }
 
 /// Parse an in-memory document into the document model. Pass a [`Format`] to
 /// select the parser, or `None` to detect it from the content.
-///
-/// Unsupported for [`Format::Pdf`]: PDF conversion produces Markdown
-/// directly and has no document-model form; use [`to_markdown_bytes`].
 pub fn to_document(
     bytes: &[u8],
     format: impl Into<Option<Format>>,

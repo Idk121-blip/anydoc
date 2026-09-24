@@ -3,7 +3,7 @@
 [![npm](https://img.shields.io/npm/v/@firecrawl/anydoc.svg)](https://www.npmjs.com/package/@firecrawl/anydoc)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](https://github.com/firecrawl/anydoc/blob/main/LICENSE)
 
-Convert Word, PowerPoint, Excel, OpenDocument, RTF, EPUB, CSV, and PDF files into clean GitHub-Flavored Markdown. Node.js bindings for the [anydoc](https://github.com/firecrawl/anydoc) Rust crate, built by [Firecrawl](https://firecrawl.dev). Also available as a hosted API through [Firecrawl Parse](https://firecrawl.dev/parse), which adds our OCR models for the scanned pages anydoc can't read on its own.
+Convert Word, PowerPoint, Excel, OpenDocument, RTF, EPUB, CSV, and PDF files into clean GitHub-Flavored Markdown or HTML. Node.js bindings for the [anydoc](https://github.com/firecrawl/anydoc) Rust crate, built by [Firecrawl](https://firecrawl.dev). Also available as a hosted API through [Firecrawl Parse](https://firecrawl.dev/parse), which adds our OCR models for the scanned pages anydoc can't read on its own.
 
 Every format parses into one shared document model and renders through a single Markdown serializer, so headings, tables, lists, and footnotes come out the same no matter which format goes in. Conversion runs on the libuv thread pool and never blocks the event loop. TypeScript types ship with the package.
 
@@ -31,16 +31,17 @@ The package ships an `anydoc` command, so `npx` converts a document with no inst
 ```bash
 npx @firecrawl/anydoc report.docx               # Markdown to stdout
 npx @firecrawl/anydoc slides.pptx -o slides.md  # or to a file
+npx @firecrawl/anydoc report.pdf --to html      # HTML page, images inline
 npx @firecrawl/anydoc - --format csv < data.csv # read stdin
 npx @firecrawl/anydoc scan.pdf --ocr hosted     # scanned pages via Firecrawl Parse
 ```
 
-Markdown goes to stdout, errors to stderr, and `anydoc --help` covers the rest.
+Output goes to stdout, errors to stderr, and `anydoc --help` covers the rest.
 
 ## Usage
 
 ```js
-import { toDocument, toMarkdown, toMarkdownBytes } from '@firecrawl/anydoc';
+import { toDocument, toHtml, toMarkdown, toMarkdownBytes } from '@firecrawl/anydoc';
 
 // From a file path:
 const markdown = await toMarkdown('report.docx');
@@ -53,7 +54,14 @@ const fromCsv = await toMarkdownBytes(bytes, 'csv');
 
 // Or stop at the document model, which also carries embedded assets:
 const document = await toDocument(bytes);
+
+// Or get a standalone HTML page, from a path or (toHtmlBytes) from bytes:
+const html = await toHtml('report.pdf');
 ```
+
+## HTML output
+
+`toHtml` and `toHtmlBytes` write a standalone HTML page. HTML keeps what Markdown cannot: merged table cells stay merged (`colspan`/`rowspan`), list numbering keeps its style, and embedded images show inline as `data:` URIs. On the CLI, `--to html`. Hosted OCR returns Markdown only, so the HTML functions take no `ocr` option.
 
 ## Scanned pages
 
@@ -107,7 +115,7 @@ formatFromPath('report.odt'); // 'odt'
 
 ## Images and embedded objects
 
-Markdown cannot embed bytes, so an embedded image renders as its alt text while the bytes stay on `document.assets`, tagged with a media type and the part they came from. Images that carry an external URL render as ordinary Markdown images.
+Markdown cannot embed bytes, so an embedded image renders as its alt text while the bytes stay on `document.assets` (HTML output shows them inline), tagged with a media type and the part they came from. Images that carry an external URL render as ordinary Markdown images.
 
 Full behavior notes and benchmarks live in the [repository README](https://github.com/firecrawl/anydoc#readme).
 

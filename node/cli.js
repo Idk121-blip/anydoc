@@ -5,25 +5,28 @@ const { readFile, writeFile } = require('node:fs/promises')
 
 const FORMATS = 'doc, docx, odt, pdf, ppt, pptx, rtf, epub, xlsx, ods, odp, csv'
 
-const HELP = `anydoc: convert documents to GitHub-Flavored Markdown
+const HELP = `anydoc: convert documents to GitHub-Flavored Markdown or HTML
 
 Usage:
   anydoc <file> [options]
   anydoc - [options] < file
 
-Converts one document per invocation and writes the Markdown to stdout.
+Converts one document per invocation and writes the Markdown (or HTML) to
+stdout.
 Pass - as the input to read the document from stdin. Never prompts; all
 diagnostics go to stderr.
 
 Options:
-  -o, --output <path>    Write the Markdown to <path> instead of stdout
+  -o, --output <path>    Write the output to <path> instead of stdout
+  -t, --to <output>      markdown (default) or html: a standalone page with
+                         merged table cells and images kept inline
   -f, --format <format>  Name the input format instead of detecting it:
                          ${FORMATS}
                          (extension aliases like xls, docm, ppsx resolve
                          to these)
   --ocr <mode>           What to do with a PDF whose pages need OCR:
                          reject (default) exits 3; hosted sends the
-                         document to Firecrawl Parse
+                         document to Firecrawl Parse (Markdown only)
   --api-key <key>        Firecrawl API key for --ocr hosted, else
                          FIRECRAWL_API_KEY, else keyless
   --api-url <url>        Firecrawl API URL for --ocr hosted, else
@@ -46,12 +49,14 @@ Exit codes:
 Examples:
   anydoc report.docx
   anydoc slides.pptx -o slides.md
+  anydoc report.pdf --to html -o report.html
   anydoc - --format csv < data.csv
   curl -s https://example.com/paper.pdf | anydoc -
   anydoc scan.pdf --ocr hosted
 `
 
 const OCR_MODES = ['reject', 'hosted']
+const OUTPUTS = ['markdown', 'html']
 
 const USAGE_ERROR = 2
 const CONVERSION_ERROR = 1
@@ -63,7 +68,7 @@ function fail(code, message) {
 }
 
 function parseArgs(argv) {
-  const args = { input: null, output: null, format: null, ocr: null, apiKey: null, apiUrl: null }
+  const args = { input: null, output: null, to: 'markdown', format: null, ocr: null, apiKey: null, apiUrl: null }
   let positionalOnly = false
   for (let i = 0; i < argv.length; i++) {
     let arg = argv[i]
@@ -104,6 +109,13 @@ function parseArgs(argv) {
       case '--output':
         args.output = value()
         break
+      case '-t':
+      case '--to':
+        args.to = value()
+        if (!OUTPUTS.includes(args.to)) {
+          fail(USAGE_ERROR, `invalid --to '${args.to}'; expected one of: ${OUTPUTS.join(', ')}`)
+        }
+        break
       case '-f':
       case '--format':
         args.format = value()
@@ -143,28 +155,34 @@ async function main() {
   if (args.input === null) {
     fail(USAGE_ERROR, 'missing input: pass a document path, or - for stdin (see anydoc --help)')
   }
+  if (args.to === 'html' && args.ocr === 'hosted') {
+    fail(USAGE_ERROR, '--ocr hosted returns Markdown only; it cannot be combined with --to html')
+  }
 
   // Loaded after argument handling so --help and --version work even where
   // no native binding is available.
-  const { formatFromExtension, toMarkdown, toMarkdownBytes } = require('./anydoc.js')
+  const anydoc = require('./anydoc.js')
+  const html = args.to === 'html'
+  const fromPath = html ? (path) => anydoc.toHtml(path) : anydoc.toMarkdown
+  const fromBytes = html ? (bytes, format) => anydoc.toHtmlBytes(bytes, format) : anydoc.toMarkdownBytes
 
   let format
   if (args.format !== null) {
-    format = formatFromExtension(args.format)
+    format = anydoc.formatFromExtension(args.format)
     if (format === null) {
       fail(USAGE_ERROR, `invalid format '${args.format}'; expected one of: ${FORMATS}`)
     }
   }
 
   const options = { ocr: args.ocr ?? undefined, apiKey: args.apiKey ?? undefined, apiUrl: args.apiUrl ?? undefined }
-  let markdown
+  let converted
   try {
     if (args.input === '-') {
-      markdown = await toMarkdownBytes(await readStdin(), format, options)
+      converted = await fromBytes(await readStdin(), format, options)
     } else if (format !== undefined) {
-      markdown = await toMarkdownBytes(await readFile(args.input), format, options)
+      converted = await fromBytes(await readFile(args.input), format, options)
     } else {
-      markdown = await toMarkdown(args.input, options)
+      converted = await fromPath(args.input, options)
     }
   } catch (error) {
     fail(error.code === 'needsOcr' ? NEEDS_OCR : CONVERSION_ERROR, error.message)
@@ -172,7 +190,7 @@ async function main() {
 
   if (args.output !== null) {
     try {
-      await writeFile(args.output, markdown)
+      await writeFile(args.output, converted)
     } catch (error) {
       fail(CONVERSION_ERROR, error.message)
     }
@@ -182,7 +200,7 @@ async function main() {
     process.stdout.on('error', (error) => {
       process.exit(error.code === 'EPIPE' ? 0 : CONVERSION_ERROR)
     })
-    process.stdout.write(markdown)
+    process.stdout.write(converted)
   }
 }
 

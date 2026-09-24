@@ -71,13 +71,20 @@ def to_markdown_bytes(data: bytes | bytearray, format: Format | None = None) -> 
     detected from the content, which signature-less formats (CSV) have to
     name explicitly."""
 
+def to_html(path: str | os.PathLike[str]) -> str:
+    """Convert a document file to a standalone HTML page, embedded images
+    included as `data:` URIs. The format is detected as for `to_markdown`.
+    HTML keeps what Markdown cannot: merged table cells, list numbering
+    styles, and the images themselves."""
+
+def to_html_bytes(data: bytes | bytearray, format: Format | None = None) -> str:
+    """Convert an in-memory document to a standalone HTML page. The format is
+    as for `to_markdown_bytes`."""
+
 def to_document(data: bytes | bytearray, format: Format | None = None) -> Document:
     """Parse an in-memory document into the document model, which also
     carries the embedded assets. Without a format, it is detected from the
-    content.
-
-    Unsupported for `pdf`: PDF conversion produces Markdown directly and has
-    no document-model form; use `to_markdown_bytes`."""
+    content."""
 
 @final
 class Document:

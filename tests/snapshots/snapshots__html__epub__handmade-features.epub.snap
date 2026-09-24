@@ -1,0 +1,64 @@
+---
+source: tests/snapshots.rs
+expression: output
+---
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Feature Book</title>
+<style>
+body { font-family: system-ui, sans-serif; line-height: 1.5; max-width: 50rem; margin: 2rem auto; padding: 0 1rem; }
+table { border-collapse: collapse; margin: 1rem 0; }
+th, td { border: 1px solid #999; padding: 0.25rem 0.5rem; vertical-align: top; }
+table.layout, table.layout td { border: none; }
+img { max-width: 100%; }
+pre { overflow-x: auto; }
+</style>
+</head>
+<body>
+<h1 id="feature-book">Feature Book</h1>
+<p><a id="oebps-ch1-xhtml"></a></p>
+<h1 id="feature-chapter">Feature Chapter</h1>
+<p><strong>Inline-styled bold paragraph.</strong></p>
+<p><s>Struck via class.</s></p>
+<table>
+<tbody>
+<tr><td rowspan="2">Tall</td><td>B1</td></tr>
+<tr><td>B2</td></tr>
+<tr><td>A3</td><td>B3</td></tr>
+</tbody>
+</table>
+<ol start="3">
+<li>three</li>
+</ol>
+<ol start="2">
+<li>two</li>
+</ol>
+<ol>
+<li>one</li>
+</ol>
+<ol type="a">
+<li>alpha one</li>
+</ol>
+<ol type="a" start="5">
+<li>jumps to five</li>
+<li>six</li>
+</ol>
+<ol>
+<li style="list-style-type: none">-1. minus one</li>
+<li style="list-style-type: none">0. zero</li>
+<li style="list-style-type: none">1. one</li>
+</ol>
+<ol>
+<li style="list-style-type: none">1. one</li>
+<li style="list-style-type: none">0. zero</li>
+<li style="list-style-type: none">-1. minus one</li>
+</ol>
+<p>See <a href="#oebps-ch2-xhtml-target-span">the marked span</a> in chapter two, or <a href="https://example.com/x">an external page</a>, or <a href="notes.txt">a relative resource</a>.</p>
+<h1 id="second-chapter">Second Chapter</h1>
+<p>Leading text. <a id="oebps-ch2-xhtml-target-span"></a>This span is the anchor target.</p>
+<p>Back to <a href="#oebps-ch1-xhtml">chapter one&#39;s start</a>.</p>
+</body>
+</html>

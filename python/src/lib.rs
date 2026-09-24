@@ -177,11 +177,26 @@ fn to_markdown_bytes(py: Python<'_>, data: Vec<u8>, format: Option<&str>) -> PyR
     py.detach(|| anydoc::to_markdown_bytes(&data, format)).map_err(|e| convert_error(py, e))
 }
 
+/// Convert a document file to a standalone HTML page, embedded images
+/// included as `data:` URIs. The format is detected as for `to_markdown`.
+/// HTML keeps what Markdown cannot: merged table cells, list numbering
+/// styles, and the images themselves.
+#[pyfunction]
+fn to_html(py: Python<'_>, path: PathBuf) -> PyResult<String> {
+    py.detach(|| anydoc::to_html(&path)).map_err(|e| convert_error(py, e))
+}
+
+/// Convert an in-memory document to a standalone HTML page. The format is
+/// as for `to_markdown_bytes`.
+#[pyfunction]
+#[pyo3(signature = (data, format=None))]
+fn to_html_bytes(py: Python<'_>, data: Vec<u8>, format: Option<&str>) -> PyResult<String> {
+    let format = format.map(parse_format).transpose()?;
+    py.detach(|| anydoc::to_html_bytes(&data, format)).map_err(|e| convert_error(py, e))
+}
+
 /// Parse an in-memory document into the document model, which also carries
 /// the embedded assets. Without a format, it is detected from the content.
-///
-/// Unsupported for `pdf`: PDF conversion produces Markdown directly and has
-/// no document-model form; use `to_markdown_bytes`.
 #[pyfunction]
 #[pyo3(signature = (data, format=None))]
 fn to_document(
@@ -195,7 +210,7 @@ fn to_document(
     document::document(py, parsed)
 }
 
-/// Convert documents to GitHub-Flavored Markdown.
+/// Convert documents to GitHub-Flavored Markdown or HTML.
 #[pymodule]
 fn _anydoc(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(format_from_bytes, m)?)?;
@@ -204,6 +219,8 @@ fn _anydoc(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(to_markdown, m)?)?;
     m.add_function(wrap_pyfunction!(to_markdown_bytes, m)?)?;
     m.add_function(wrap_pyfunction!(to_document, m)?)?;
+    m.add_function(wrap_pyfunction!(to_html, m)?)?;
+    m.add_function(wrap_pyfunction!(to_html_bytes, m)?)?;
     m.add_class::<document::Asset>()?;
     m.add_class::<document::Block>()?;
     m.add_class::<document::Cell>()?;

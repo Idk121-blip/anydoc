@@ -1,0 +1,106 @@
+%PDF-1.4
+1 0 obj
+<< /Type /Catalog /Pages 2 0 R >>
+endobj
+2 0 obj
+<< /Type /Pages /Kids [4 0 R 6 0 R] /Count 2 >>
+endobj
+3 0 obj
+<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>
+endobj
+4 0 obj
+<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 3 0 R >> >> /Contents 5 0 R >>
+endobj
+5 0 obj
+<<  /Length 1162 >>
+stream
+BT /F1 24 Tf 72 720 Td (Inventory) Tj ET
+BT /F1 12 Tf 72 690 Td (Stock on hand at the end of the quarter.) Tj ET
+BT /F1 11 Tf 76 286 Td (Item) Tj ET
+BT /F1 11 Tf 276 286 Td (Quantity) Tj ET
+BT /F1 11 Tf 376 286 Td (Price) Tj ET
+BT /F1 11 Tf 76 266 Td (Widget 1) Tj ET
+BT /F1 11 Tf 276 266 Td (3) Tj ET
+BT /F1 11 Tf 376 266 Td (7.00) Tj ET
+BT /F1 11 Tf 76 246 Td (Widget 2) Tj ET
+BT /F1 11 Tf 276 246 Td (6) Tj ET
+BT /F1 11 Tf 376 246 Td (14.00) Tj ET
+BT /F1 11 Tf 76 226 Td (Widget 3) Tj ET
+BT /F1 11 Tf 276 226 Td (9) Tj ET
+BT /F1 11 Tf 376 226 Td (21.00) Tj ET
+BT /F1 11 Tf 76 206 Td (Widget 4) Tj ET
+BT /F1 11 Tf 276 206 Td (12) Tj ET
+BT /F1 11 Tf 376 206 Td (28.00) Tj ET
+BT /F1 11 Tf 76 186 Td (Widget 5) Tj ET
+BT /F1 11 Tf 276 186 Td (15) Tj ET
+BT /F1 11 Tf 376 186 Td (35.00) Tj ET
+BT /F1 11 Tf 76 166 Td (Widget 6) Tj ET
+BT /F1 11 Tf 276 166 Td (18) Tj ET
+BT /F1 11 Tf 376 166 Td (42.00) Tj ET
+0.5 w
+72 300 m 472 300 l S
+72 280 m 472 280 l S
+72 260 m 472 260 l S
+72 240 m 472 240 l S
+72 220 m 472 220 l S
+72 200 m 472 200 l S
+72 180 m 472 180 l S
+72 160 m 472 160 l S
+72 300 m 72 160 l S
+272 300 m 272 160 l S
+372 300 m 372 160 l S
+472 300 m 472 160 l S
+
+endstream
+endobj
+6 0 obj
+<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 3 0 R >> >> /Contents 7 0 R >>
+endobj
+7 0 obj
+<<  /Length 841 >>
+stream
+BT /F1 11 Tf 76 726 Td (Item) Tj ET
+BT /F1 11 Tf 276 726 Td (Quantity) Tj ET
+BT /F1 11 Tf 376 726 Td (Price) Tj ET
+BT /F1 11 Tf 76 706 Td (Widget 7) Tj ET
+BT /F1 11 Tf 276 706 Td (21) Tj ET
+BT /F1 11 Tf 376 706 Td (49.00) Tj ET
+BT /F1 11 Tf 76 686 Td (Widget 8) Tj ET
+BT /F1 11 Tf 276 686 Td (24) Tj ET
+BT /F1 11 Tf 376 686 Td (56.00) Tj ET
+BT /F1 11 Tf 76 666 Td (Widget 9) Tj ET
+BT /F1 11 Tf 276 666 Td (27) Tj ET
+BT /F1 11 Tf 376 666 Td (63.00) Tj ET
+BT /F1 11 Tf 76 646 Td (Widget 10) Tj ET
+BT /F1 11 Tf 276 646 Td (30) Tj ET
+BT /F1 11 Tf 376 646 Td (70.00) Tj ET
+0.5 w
+72 740 m 472 740 l S
+72 720 m 472 720 l S
+72 700 m 472 700 l S
+72 680 m 472 680 l S
+72 660 m 472 660 l S
+72 640 m 472 640 l S
+72 740 m 72 640 l S
+272 740 m 272 640 l S
+372 740 m 372 640 l S
+472 740 m 472 640 l S
+BT /F1 12 Tf 72 620 Td (All prices exclude tax.) Tj ET
+
+endstream
+endobj
+xref
+0 8
+0000000000 65535 f 
+0000000009 00000 n 
+0000000058 00000 n 
+0000000121 00000 n 
+0000000191 00000 n 
+0000000317 00000 n 
+0000001532 00000 n 
+0000001658 00000 n 
+trailer
+<< /Size 8 /Root 1 0 R >>
+startxref
+2551
+%%EOF

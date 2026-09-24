@@ -21,7 +21,7 @@ export type ConvertErrorCode =
   | 'resourceLimit'
   /** A part required for any meaningful output is absent. */
   | 'missingPart'
-  /** The file could not be read, from `toMarkdown` only. */
+  /** The file could not be read, from `toMarkdown` or `toHtml` only. */
   | 'io'
   /** `ocr: 'hosted'` could not get the document through Firecrawl Parse. */
   | 'hosted'

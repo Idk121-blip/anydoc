@@ -713,5 +713,7 @@ module.exports.MarkerKind = nativeBinding.MarkerKind
 module.exports.NoteKind = nativeBinding.NoteKind
 module.exports.TableKind = nativeBinding.TableKind
 module.exports.toDocument = nativeBinding.toDocument
+module.exports.toHtml = nativeBinding.toHtml
+module.exports.toHtmlBytes = nativeBinding.toHtmlBytes
 module.exports.toMarkdown = nativeBinding.toMarkdown
 module.exports.toMarkdownBytes = nativeBinding.toMarkdownBytes
