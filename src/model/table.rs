@@ -6,8 +6,8 @@ use std::collections::HashMap;
 /// Canonical table grid. **Invariant:** every logical grid position appears
 /// exactly once - content and spans exist only on the origin slot, and each
 /// position covered by a span holds a [`CellSlot::Covered`] marker pointing
-/// back at its origin. Frontends construct grids through one internal builder
-/// that enforces this, so a `Table` handed to a consumer always holds.
+/// back at its origin. Frontends construct grids through [`GridBuilder`],
+/// which enforces this, so a `Table` handed to a consumer always holds.
 #[derive(Debug, Clone, Default)]
 pub struct Table {
     /// Rows of slots. Rows may differ in length when the source is ragged.
@@ -126,10 +126,12 @@ pub struct GridBuilder {
 }
 
 impl GridBuilder {
+    /// An empty grid.
     pub fn new() -> Self {
         Self::default()
     }
 
+    /// Start a new row; cells placed next go into it.
     pub fn next_row(&mut self) {
         self.grid.push(Vec::new());
     }
@@ -231,6 +233,9 @@ impl GridBuilder {
         }
     }
 
+    /// The table, with every pending covered position materialized, trailing
+    /// empty rows dropped, and spans clamped to the grid that remains.
+    /// `header_rows` starts at 0.
     pub fn finish(mut self, kind: TableKind) -> Table {
         // Materialize every pending covered position in surviving rows,
         // including tails behind a gap (a short row under a span at a later
