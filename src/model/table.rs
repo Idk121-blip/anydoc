@@ -126,12 +126,12 @@ pub struct GridBuilder {
 }
 
 impl GridBuilder {
-    /// An empty grid.
+    /// An empty builder.
     pub fn new() -> Self {
         Self::default()
     }
 
-    /// Start a new row; cells placed next go into it.
+    /// Start the next row.
     pub fn next_row(&mut self) {
         self.grid.push(Vec::new());
     }
@@ -233,9 +233,7 @@ impl GridBuilder {
         }
     }
 
-    /// The table, with every pending covered position materialized, trailing
-    /// empty rows dropped, and spans clamped to the grid that remains.
-    /// `header_rows` starts at 0.
+    /// The finished table; `header_rows` starts at 0.
     pub fn finish(mut self, kind: TableKind) -> Table {
         // Materialize every pending covered position in surviving rows,
         // including tails behind a gap (a short row under a span at a later
